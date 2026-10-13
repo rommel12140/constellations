@@ -49,18 +49,20 @@ h1 em { color: var(--warm); }
 .cpu.over .row b { color: var(--hot); }
 
 .bottom { position: absolute; left: 0; right: 0; bottom: 0; padding: 0 28px 22px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px 22px; z-index: 2; }
-.size { display: flex; align-items: center; gap: 14px; flex: 1 1 420px; min-width: 0; padding: 12px 16px; border: 1px solid var(--rule); border-radius: 14px; background: var(--glass); }
+.size { display: flex; align-items: center; gap: 14px; flex: 1 1 400px; min-width: 0; padding: 12px 16px; border: 1px solid var(--rule); border-radius: 14px; background: var(--glass); }
 .size label { font: 500 11px/1 var(--f-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--dim); white-space: nowrap; }
 .size output { font: 500 26px/1 var(--f-mono); font-variant-numeric: tabular-nums; min-width: 4.6ch; text-align: right; }
 .size .unit { color: var(--dim); white-space: nowrap; font-variant-numeric: tabular-nums; }
 input[type=range] { flex: 1; min-width: 100px; accent-color: var(--warm); height: 28px; }
+.size.lines { flex: 0 0 auto; }
+.size.lines input[type=range] { flex: none; width: 120px; min-width: 0; }
 .chips { display: flex; gap: 6px; align-items: center; padding: 8px 10px; border: 1px solid var(--rule); border-radius: 14px; background: var(--glass); }
 .chips span { font: 500 11px/1 var(--f-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--dim); padding: 0 6px; }
 button { font: 500 13px/1 var(--f-body); color: var(--ink); background: transparent; border: 1px solid var(--rule); border-radius: 999px; padding: 9px 13px; cursor: pointer; }
 button:hover { border-color: var(--dim); }
 button:focus-visible { outline: 2px solid var(--warm); outline-offset: 2px; }
 button[aria-pressed=true] { background: var(--ink); color: var(--sky); border-color: var(--ink); }
-.legend { color: var(--dim); font-size: 13px; display: flex; align-items: center; gap: 8px; }
+.legend { color: var(--dim); font-size: 12.5px; display: flex; align-items: center; gap: 8px; margin-top: 4px; }
 .legend i { width: 7px; height: 7px; border-radius: 50%; background: var(--ink); display: inline-block; }
 
 .lbl { position: absolute; left: 0; top: 0; pointer-events: auto; background: none; border: 0; border-radius: 8px; padding: 4px 8px; text-align: center; color: var(--ink); display: grid; gap: 2px; white-space: nowrap; will-change: transform; }
@@ -105,7 +107,8 @@ button[aria-pressed=true] { background: var(--ink); color: var(--sky); border-co
   .size output { font-size: 22px; }
   .size { flex-wrap: wrap; }
   .size input[type=range] { flex-basis: 100%; order: 3; }
-  .legend { display: none; }
+  .size.lines { flex: 1 1 100%; }
+  .size.lines input[type=range] { width: auto; flex: 1 1 100%; }
   .card { position: fixed; top: auto; bottom: 12px; left: 12px; right: 12px; width: auto; transform: translate(0, 24px); max-height: 70svh; overflow: auto; }
   .card.open { transform: none; }
   .foot { padding-inline: 16px; }
@@ -127,6 +130,7 @@ button[aria-pressed=true] { background: var(--ink); color: var(--sky); border-co
         <div class="track"><div class="fill" id="cpuFill"></div></div>
         <div class="row"><span>CPU <b id="cpuUsed">0.6 s</b></span><span>limit 30 s</span></div>
       </div>
+      <div class="legend"><i></i> each dot is one meeting · clock sped up</div>
     </div>
   </div>
   <div class="stage" id="stage">
@@ -135,17 +139,17 @@ button[aria-pressed=true] { background: var(--ink); color: var(--sky); border-co
   </div>
   <div class="bottom">
     <div class="size">
-      <label for="people">Team</label>
-      <input type="range" id="people" min="0" max="1000" step="1" value="0">
-      <output id="peopleOut" for="people">100</output>
-      <span class="unit" id="tasksOut">people · 5,000 tasks</span>
+      <label for="tasks">Tasks to check</label>
+      <input type="range" id="tasks" min="0" max="1000" step="1" value="0">
+      <output id="tasksOut" for="tasks">5,000</output>
+      <span class="unit">in the Sheet and archive</span>
     </div>
-    <div class="chips" role="group" aria-label="Archived tasks kept">
-      <span>Archive</span>
-      <button type="button" data-y="1" aria-pressed="true">1 year</button>
-      <button type="button" data-y="3" aria-pressed="false">3 years</button>
+    <div class="size lines">
+      <label for="lines">Action lines</label>
+      <input type="range" id="lines" min="5" max="40" step="1" value="20">
+      <output id="linesOut" for="lines">20</output>
+      <span class="unit">per meeting</span>
     </div>
-    <div class="legend"><i></i> one meeting · more people, more meetings · clock sped up</div>
   </div>
   <aside class="card" id="card" aria-live="polite"></aside>
 </section>
@@ -155,8 +159,8 @@ button[aria-pressed=true] { background: var(--ink); color: var(--sky); border-co
     <summary>What is real, measured and assumed</summary>
     <p><b>Real:</b> the steps, their order, the loops, the line references, the cron every minute and the Worker's 30-second CPU limit (<code>wrangler.jsonc:135</code>) come from EXO's source at commit 5362780. No EXO code was run.</p>
     <p><b>Measured:</b> copies of EXO's matching functions, timed on made-up task titles in this container: 4.9 µs per identity hash, 1 µs per comparison wording, 8.2 µs per title comparison.</p>
-    <p><b>Assumed:</b> 10 open tasks per person plus 40 archived per year; a third of tasks came from meetings; 20 action lines, 12 reach the duplicate check, 8 are added. 120 ms per Google file check, 600 ms to read the notes, 6 s for the Sonnet call, 350 ms per Sheet read, 5 ms per database query, 900 ms to write and read back the rows. CPU counts only matching and parsing, not waiting on Google or Sonnet. The 15-minute wait for notes to settle is left out.</p>
-    <p><b>Simplified:</b> dots arrive faster as the team grows and the clock is sped up, so the crowd at each star shows where meetings spend their time. EXO itself takes one meeting per cron tick, so a real backlog would wait at the start rather than at each star.</p>
+    <p><b>Assumed:</b> a third of tasks came from meetings; 60% of action lines reach the duplicate check and 40% are added. 120 ms per Google file check, 600 ms to read the notes, 4 s plus 0.1 s per line for the Sonnet call, 350 ms per Sheet read, 5 ms per database query, 900 ms to write and read back the rows. CPU counts only matching and parsing, not waiting on Google or Sonnet. The 15-minute wait for notes to settle is left out.</p>
+    <p><b>Simplified:</b> dots arrive at a steady pace and the clock is sped up, so the crowd at each star shows where each meeting spends its time. EXO itself takes one meeting per cron tick. Every meeting it processes adds rows to the Sheet, so each meeting leaves the next one more tasks to check.</p>
   </details>
 </div>
 
@@ -164,33 +168,34 @@ button[aria-pressed=true] { background: var(--ink); color: var(--sky); border-co
 (() => {
   // ---------- Cost model: real loops, measured unit costs, stated assumptions ----------
   const US_HASH = 4.9, US_CMP = 0.95, US_SIM = 8.2, US_PARSE = 2;
-  const L = 20, PAST = 12, A = 8, OPEN = 10, ARCH = 40, Q = 5, GOOGLE = 120, DOC = 600, SONNET = 6000, SHEET = 350, WRITE = 900, CPU_LIMIT = 30000;
-  let YEARS = 1, P = 100;
-  const tasks = p => p * (OPEN + ARCH * YEARS);
+  const Q = 5, GOOGLE = 120, DOC = 600, SHEET = 350, WRITE = 900, CPU_LIMIT = 30000;
+  // The two numbers each meeting's cost depends on: its action lines (L) and the tasks it is checked against (T).
+  let T = 5000, LINES = 20;
+  const PAST = () => Math.round(LINES * .6), ADDS = () => Math.max(1, Math.round(LINES * .4)), SONNET = () => 4000 + 100 * LINES;
 
   const STEPS = [
     { key: 'tick', name: 'Every minute', o: 'O(1)', grows: 'nothing',
       holds: 'A cron tick. It takes the background lease and checks that the last write landed.',
-      code: 'src/meetings/automation-runner.ts:141', cost: p => ({ wait: 4 * Q, cpu: 0 }) },
+      code: 'src/meetings/automation-runner.ts:141', cost: t => ({ wait: 4 * Q, cpu: 0 }) },
     { key: 'doc', name: 'Read the notes', o: 'O(notes)', grows: 'the length of the notes',
       holds: 'The meeting notes from Google Docs, once they have gone 15 minutes without an edit.',
-      code: 'src/meetings/automation-runner.ts:85', cost: p => ({ wait: GOOGLE + DOC, cpu: 0 }) },
+      code: 'src/meetings/automation-runner.ts:85', cost: t => ({ wait: GOOGLE + DOC, cpu: 0 }) },
     { key: 'ai', name: 'Sonnet sorts the lines', o: 'O(L)', grows: 'action lines, capped at 40',
-      holds: `The ${L} action lines. Sonnet decides which are real tasks, who owns them and when they are due.`,
-      code: 'src/meetings/automation-runner.ts:105', cost: p => ({ wait: SONNET, cpu: 0 }) },
+      holds: () => `The ${LINES} action lines. Sonnet decides which are real tasks, who owns them and when they are due.`,
+      code: 'src/meetings/automation-runner.ts:105', cost: t => ({ wait: SONNET(), cpu: 0 }) },
     { key: 'load', name: 'Load every task', o: 'O(T)', grows: 'tasks, open and archived',
       holds: 'Every open task in the shared Sheet and every archived task.',
-      code: 'src/meetings/automation-runner.ts:115', cost: p => ({ wait: 2 * SHEET + Q, cpu: tasks(p) * US_PARSE / 1000 }) },
+      code: 'src/meetings/automation-runner.ts:115', cost: t => ({ wait: 2 * SHEET + Q, cpu: t * US_PARSE / 1000 }) },
     { key: 'plan', name: 'Plan each line', o: 'O(L × T)', grows: 'action lines × tasks',
       holds: 'Each action line, checked against every task: was it added before, and is there a similar task already?',
-      code: 'src/meetings/automation-plan.ts:55', cost: p => { const T = tasks(p); return { wait: 2 * Q, cpu: (L * T / 3 * US_HASH + PAST * T / 2 * (US_CMP + US_SIM)) / 1000 }; },
+      code: 'src/meetings/automation-plan.ts:55', cost: t => ({ wait: 2 * Q, cpu: (LINES * t / 3 * US_HASH + PAST() * t / 2 * (US_CMP + US_SIM)) / 1000 }),
       fix: 'Possible change, not verified: work out each task\'s identity and wording once per meeting, keep identities in a Set and compare only titles that share a word. Hashing becomes O(L + T).' },
     { key: 'recheck', name: 'Recheck before writing', o: 'O(A × T)', grows: 'rows to add × tasks',
-      holds: `The ${A} rows about to be added, each checked again against every task in its tab.`,
-      code: 'src/meetings/automation-writer.ts:117', cost: p => ({ wait: SHEET + A * 2 * Q, cpu: A * tasks(p) / 2 * (US_CMP + US_SIM) / 1000 }),
+      holds: () => `The ${ADDS()} rows about to be added, each checked again against every task in its tab.`,
+      code: 'src/meetings/automation-writer.ts:117', cost: t => ({ wait: SHEET + ADDS() * 2 * Q, cpu: ADDS() * t / 2 * (US_CMP + US_SIM) / 1000 }),
       fix: 'Possible change, not verified: reuse the wording worked out while planning instead of rebuilding it for every row.' },
     { key: 'write', name: 'Write the rows', o: 'O(A)', grows: 'rows to add, capped at 40',
-      holds: `The ${A} new tasks, written to the Sheet in one batch and read back to prove they landed.`,
+      holds: () => `The ${ADDS()} new tasks, written to the Sheet in one batch and read back to prove they landed.`,
       code: 'src/meetings/automation-writer.ts:181', cost: p => ({ wait: WRITE, cpu: 0 }) },
   ];
   const N = STEPS.length;
@@ -204,7 +209,7 @@ button[aria-pressed=true] { background: var(--ink); color: var(--sky); border-co
     let stop = null, acc = 0;
     rows.forEach((r, i) => { if (stop === null && r.cpu > 0 && acc + r.cpu >= CPU_LIMIT) stop = { i, at: (CPU_LIMIT - acc) / r.cpu }; acc += r.cpu; });
     let limitAt = null;
-    for (let q = 10; q <= 100000; q = Math.ceil(q * 1.01)) if (STEPS.reduce((a, s) => a + s.cost(q).cpu, 0) >= CPU_LIMIT) { limitAt = q; break; }
+    for (let q = 500; q <= 5e7; q = Math.ceil(q * 1.01)) if (STEPS.reduce((a, s) => a + s.cost(q).cpu, 0) >= CPU_LIMIT) { limitAt = q; break; }
     const top = rows.reduce((a, r) => r.ms > a.ms ? r : a);
     const grow = rows.reduce((a, r) => r.ms * (r.x2 - 1) > a.ms * (a.x2 - 1) ? r : a);
     return { rows, total, cpu, stop, limitAt, top, grow };
@@ -267,7 +272,7 @@ button[aria-pressed=true] { background: var(--ink); color: var(--sky); border-co
   // A dot waits at each star for that step's time (sped up), so slow steps collect a crowd.
   const MOVE = 850, SPEED = .8;
   const dwell = i => 220 + Math.min(M.rows[i].ms, 40000) * SPEED;
-  const rate = () => Math.min(narrow.matches ? 8 : 14, Math.max(.12, P / 100));
+  const rate = () => narrow.matches ? 1.5 : 2.2;
   let dots = [], sparks = [], spawnAcc = 0, lastT = 0;
   function spawn(now) { dots.push({ leg: 0, t0: now, dur: MOVE * 1.4, stay: false, a: rnd() * 6.283, rr: 0, spin: .6 + rnd() * .8 }); }
   const pt = j => j < 0 ? world.in : j >= N ? world.out : world.pts[j];
@@ -323,7 +328,7 @@ button[aria-pressed=true] { background: var(--ink); color: var(--sky); border-co
     ctx.beginPath(); ctx.arc(x, y, 11 * z, 0, 7); ctx.stroke();
     // Task stars carry a dust ring of tasks; it thickens as the Sheet and archive grow.
     if (s.key === 'load' || s.key === 'plan' || s.key === 'recheck') {
-      const T = tasks(P), count = Math.min(DUST.length, Math.round(30 + 95 * Math.log10(T / 100 + 1))), band = 8 + 10 * Math.log10(T / 500 + 1);
+      const count = Math.min(DUST.length, Math.round(30 + 95 * Math.log10(T / 100 + 1))), band = 8 + 10 * Math.log10(T / 500 + 1);
       ctx.fillStyle = `rgb(${rgb.join(',')})`;
       const t = reduce.matches ? 0 : now / 1000;
       for (let k = 0; k < count; k++) { const d = DUST[k], a = d.a + t * .04 * d.s, rr = (16 + d.r * band) * z; ctx.globalAlpha = focus * d.b * .7; ctx.fillRect(x + Math.cos(a) * rr, y + Math.sin(a) * rr * .9, 1.3 * z, 1.3 * z); }
@@ -410,27 +415,27 @@ button[aria-pressed=true] { background: var(--ink); color: var(--sky); border-co
 
   // ---------- Interface ----------
   function render() {
-    M = model(P);
+    M = model(T);
     M.rows.forEach((r, i) => {
       const n = nodes[i];
       n.t.textContent = `${fmtMs(r.ms)} per meeting`;
       n.lbl.setAttribute('aria-label', `${r.s.name}, ${r.s.o}, about ${fmtMs(r.ms)} per meeting, ${Math.round(r.share * 100)} percent. Open details.`);
       if (reduce.matches) { n.share = r.share; n.heat = Math.min(1, Math.max(0, (r.share - .06) / .3)); }
     });
-    const T = tasks(P), over = !!M.stop;
-    $('peopleOut').textContent = P.toLocaleString('en-US');
-    $('tasksOut').textContent = `people · ${fmtN(T)} tasks`;
+    const over = !!M.stop;
+    $('tasksOut').textContent = fmtN(T);
+    $('linesOut').textContent = LINES;
     $('total').textContent = fmtMs(M.total);
     $('cpuUsed').textContent = fmtMs(M.cpu);
     $('cpuFill').style.width = Math.min(100, M.cpu / CPU_LIMIT * 100) + '%';
     $('cpu').classList.toggle('over', over);
     const t = M.top, g = M.grow;
+    const lim = M.limitAt ? ` A meeting hits EXO's 30-second CPU limit at about ${fmtN(M.limitAt)} tasks.` : '';
     $('say').innerHTML = over
-      ? `Past EXO's 30-second CPU limit. Meetings are stopped at <b class="hot">${M.rows[M.stop.i].s.name}</b> and never reach the task Sheet.`
+      ? `Past EXO's 30-second CPU limit. Each meeting is stopped at <b class="hot">${M.rows[M.stop.i].s.name}</b> and never reaches the task Sheet.`
       : t === g
-        ? `Meetings now pile up at <b class="hot">${t.s.name}</b>. Its work grows ${x2(t.x2)} each time the team doubles${M.limitAt ? `; the CPU limit is hit at about ${M.limitAt.toLocaleString('en-US')} people` : ''}.`
-        : `Meetings wait longest at <b class="hot">${t.s.name}</b>, which does not grow. <b class="warm">${g.s.name}</b> grows ${x2(g.x2)} each time the team doubles${M.limitAt ? ` and hits the CPU limit at about ${M.limitAt.toLocaleString('en-US')} people` : ''}.`;
-    document.querySelectorAll('[data-y]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.y === YEARS)));
+        ? `Each meeting now spends longest in <b class="hot">${t.s.name}</b>: every action line is checked against every task, so its time grows ${x2(t.x2)} each time the tasks double.${lim}`
+        : `Each meeting waits longest for <b class="hot">${t.s.name}</b>, which does not depend on the tasks. <b class="warm">${g.s.name}</b> checks every action line against every task, so its time grows ${x2(g.x2)} each time the tasks double.${lim}`;
     if (open >= 0) card(open);
     kick();
   }
@@ -439,11 +444,11 @@ button[aria-pressed=true] { background: var(--ink); color: var(--sky); border-co
     $('card').innerHTML = `
       <div class="row"><span class="kicker">Step ${i + 1} of ${N}</span><button type="button" id="back">Back to all</button></div>
       <h2>${s.name}</h2>
-      <p>${s.holds}</p>
+      <p>${typeof s.holds === 'function' ? s.holds() : s.holds}</p>
       <dl>
         <dt>Grows with</dt><dd><span class="bigo">${s.o}</span><br><span class="sub">${s.grows}</span></dd>
-        <dt>Team ×2</dt><dd>${x2(r.x2)} time</dd>
-        <dt>At ${P.toLocaleString('en-US')}</dt><dd>${fmtMs(r.ms)} per meeting<br><span class="sub">${r.cpu > 1 ? fmtMs(r.cpu) + ' of it is CPU' : 'Waiting on a service, not CPU'}</span></dd>
+        <dt>Tasks ×2</dt><dd>${x2(r.x2)} time</dd>
+        <dt>At ${fmtN(T)}</dt><dd>${fmtMs(r.ms)} per meeting<br><span class="sub">${r.cpu > 1 ? fmtMs(r.cpu) + ' of it is CPU' : 'Waiting on a service, not CPU'}</span></dd>
         <dt>Code</dt><dd><code>${s.code}</code></dd>
       </dl>
       ${s.fix ? `<p class="fix">${s.fix}</p>` : ''}`;
@@ -467,11 +472,11 @@ button[aria-pressed=true] { background: var(--ink); color: var(--sky); border-co
     if (bd < 70 * Math.max(cam.z, .6)) toggle(best); else if (open >= 0) toggle(open);
   });
 
-  const MINP = 10, MAXP = 5000;
-  const sliderToP = v => Math.round(MINP * Math.pow(MAXP / MINP, v / 1000));
-  const pToSlider = p => Math.round(1000 * Math.log(p / MINP) / Math.log(MAXP / MINP));
-  $('people').addEventListener('input', e => { P = sliderToP(+e.target.value); render(); });
-  document.querySelectorAll('[data-y]').forEach(b => b.addEventListener('click', () => { YEARS = +b.dataset.y; render(); }));
+  const MINT = 500, MAXT = 500000;
+  const sliderToT = v => { const t = MINT * Math.pow(MAXT / MINT, v / 1000); const m = Math.pow(10, Math.floor(Math.log10(t)) - 1); return Math.round(t / m) * m; };
+  const tToSlider = t => Math.round(1000 * Math.log(t / MINT) / Math.log(MAXT / MINT));
+  $('tasks').addEventListener('input', e => { T = sliderToT(+e.target.value); render(); });
+  $('lines').addEventListener('input', e => { LINES = +e.target.value; render(); });
 
   new IntersectionObserver(es => { visible = es[0].isIntersecting; kick(); }).observe(sky);
   document.addEventListener('visibilitychange', () => { visible = !document.hidden; kick(); });
@@ -479,8 +484,8 @@ button[aria-pressed=true] { background: var(--ink); color: var(--sky); border-co
   narrow.addEventListener('change', () => { open = -1; $('card').classList.remove('open'); dots = []; fit(); render(); });
   reduce.addEventListener('change', () => { render(); });
 
-  $('people').value = pToSlider(P);
-  M = model(P);
+  $('tasks').value = tToSlider(T);
+  M = model(T);
   nodes.forEach((n, i) => { n.share = M.rows[i].share; n.heat = Math.min(1, Math.max(0, (n.share - .06) / .3)); });
   fit(); render();
   // Start with meetings already on their way, so the first frame shows the flow.
