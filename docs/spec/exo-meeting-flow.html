@@ -1,0 +1,415 @@
+<title>EXO Meeting Task Stars</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap">
+<style>
+/* Layout: one black sky holding the flow, the controls under it, then the selected star beside the full step list. Single dark look by choice. */
+:root {
+  color-scheme: dark;
+  --sky: #000000;
+  --ink: #ecebe6;
+  --dim: #9a9ca6;
+  --faint: #5f626e;
+  --line: rgba(236, 235, 230, .26);
+  --cool: #cfe0ff;
+  --warm: #ffc56b;
+  --hot: #ff6b3d;
+  --panel: #0b0c11;
+  --rule: #23252e;
+  --f-display: "Instrument Serif", "Iowan Old Style", Georgia, serif;
+  --f-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --ease-travel: cubic-bezier(.4, 0, .2, 1);
+  --ease-settle: cubic-bezier(.2, .8, .2, 1);
+}
+html { background: var(--sky); }
+body { background: var(--sky); color: var(--ink); font: 15px/1.55 var(--f-body); padding-inline: 16px; padding-block: 0 48px; }
+.wrap { max-width: 1240px; margin: 0 auto; display: grid; gap: 18px; }
+header { padding-block: 28px 4px; display: grid; gap: 6px; }
+.kicker { font: 500 11px/1.4 var(--f-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+h1 { font: 400 clamp(30px, 4.4vw, 46px)/1.05 var(--f-display); margin: 0; text-wrap: balance; }
+h1 em { font-style: italic; color: var(--warm); }
+.lede { margin: 0; color: var(--dim); max-width: 70ch; }
+
+.answer { font-size: clamp(16px, 1.7vw, 19px); line-height: 1.45; max-width: 72ch; margin: 0; text-wrap: pretty; }
+.answer b { font-weight: 600; }
+.answer .hotname { color: var(--hot); }
+.answer .warmname { color: var(--warm); }
+
+.stage { position: relative; width: 100%; }
+.stage svg { display: block; width: 100%; height: auto; }
+.stage text { font-family: var(--f-body); fill: var(--ink); paint-order: stroke; stroke: var(--sky); stroke-width: 4px; stroke-linejoin: round; }
+.stage .t-name { font-size: 14px; font-weight: 500; }
+.stage .t-o { font: 12px var(--f-mono); fill: var(--dim); }
+.stage .t-ms { font: 500 13px var(--f-mono); }
+.stage .star { cursor: pointer; outline: none; }
+.stage .star .hit { fill: transparent; }
+.stage .star .ring { fill: none; stroke: var(--ink); stroke-width: 1; opacity: 0; transition: opacity 160ms var(--ease-settle); }
+.stage .star:hover .ring { opacity: .45; }
+.stage .star.sel .ring { opacity: .9; }
+.stage .star:focus-visible .ring { stroke: var(--warm); opacity: 1; }
+.stage .aura { transform-box: fill-box; transform-origin: center; transition: transform 520ms var(--ease-settle); }
+.stage .seg { stroke: var(--line); stroke-width: 1; }
+.stage .seg.lit { stroke: var(--ink); stroke-opacity: .75; }
+
+.controls { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 22px; padding-block: 12px; border-block: 1px solid var(--rule); }
+.size { display: flex; align-items: center; gap: 12px; flex: 1 1 340px; min-width: 0; }
+.lbl { font: 500 11px/1 var(--f-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--dim); white-space: nowrap; }
+.size output { font: 500 22px/1 var(--f-mono); font-variant-numeric: tabular-nums; min-width: 5.2ch; text-align: right; }
+.size .unit { color: var(--dim); }
+input[type=range] { flex: 1; min-width: 110px; accent-color: var(--warm); }
+.seg-group { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+button { font: 500 13px/1 var(--f-body); color: var(--ink); background: transparent; border: 1px solid var(--rule); border-radius: 999px; padding: 9px 14px; cursor: pointer; transition: border-color 140ms var(--ease-settle), background 140ms var(--ease-settle); }
+button:hover { border-color: var(--dim); }
+button:focus-visible { outline: 2px solid var(--warm); outline-offset: 2px; }
+button[aria-pressed=true] { background: var(--ink); color: var(--sky); border-color: var(--ink); }
+#play { border-color: var(--warm); color: var(--warm); }
+#play:hover { background: rgba(255, 197, 107, .1); }
+.clock { font: 500 13px var(--f-mono); color: var(--dim); font-variant-numeric: tabular-nums; }
+.clock b { color: var(--ink); font-weight: 500; }
+
+.below { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 20px; align-items: start; }
+.card { background: var(--panel); border: 1px solid var(--rule); border-radius: 10px; padding: 18px 20px; display: grid; gap: 12px; min-width: 0; }
+.card h2 { font: 400 28px/1.1 var(--f-display); margin: 0; }
+.card .what { margin: 0; color: var(--dim); }
+.card code, .tbl code, .basis code { font: 12.5px var(--f-mono); color: var(--cool); overflow-wrap: anywhere; }
+.facts { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 8px 16px; margin: 0; }
+.facts dt { font: 500 11px/1.6 var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
+.facts dd { margin: 0; font-variant-numeric: tabular-nums; }
+.facts .big { font: 500 18px var(--f-mono); }
+.facts .sub { color: var(--dim); }
+.tag { display: inline-block; font: 500 10.5px/1 var(--f-mono); letter-spacing: .06em; text-transform: uppercase; padding: 4px 7px; border-radius: 4px; border: 1px solid var(--rule); color: var(--dim); margin-left: 6px; vertical-align: 2px; }
+.tag.src { color: var(--cool); border-color: rgba(207, 224, 255, .3); }
+.tag.est { color: var(--warm); border-color: rgba(255, 197, 107, .35); }
+.note { margin: 0; padding: 10px 12px; border-left: 2px solid var(--faint); color: var(--dim); font-size: 14px; }
+.note.fix { border-left-color: var(--cool); background: rgba(207, 224, 255, .05); color: var(--ink); }
+
+.tblwrap { overflow-x: auto; min-width: 0; }
+.tbl { width: 100%; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
+.tbl th { text-align: left; font: 500 10.5px/1.3 var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--faint); padding: 0 10px 8px 0; border-bottom: 1px solid var(--rule); }
+.tbl td { padding: 9px 10px 9px 0; border-bottom: 1px solid var(--rule); vertical-align: top; }
+.tbl td.num, .tbl th.num { text-align: right; }
+.tbl td.num { font-family: var(--f-mono); white-space: nowrap; }
+.tbl tr { cursor: pointer; }
+.tbl tr.sel td { background: rgba(236, 235, 230, .05); }
+.tbl tr:focus-visible { outline: 2px solid var(--warm); outline-offset: -2px; }
+.tbl .o { font-family: var(--f-mono); color: var(--dim); white-space: nowrap; }
+.tbl .gw { color: var(--dim); font-size: 13px; }
+.bar { display: inline-block; height: 6px; border-radius: 3px; vertical-align: middle; margin-right: 8px; }
+
+.basis { color: var(--dim); font-size: 13.5px; display: grid; gap: 6px; max-width: 92ch; }
+.basis p { margin: 0; }
+.basis b { color: var(--ink); font-weight: 500; }
+
+@media (max-width: 860px) { .below { grid-template-columns: minmax(0, 1fr); } }
+@media (prefers-reduced-motion: reduce) { .stage .aura, .stage .star .ring, button { transition: none; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="kicker">EXO · Automatic meeting tasks · commit 5362780</div>
+    <h1>Which star slows the meeting-to-task run <em>as the team grows?</em></h1>
+    <p class="lede">Once a minute, EXO takes one finished meeting and turns its action lines into rows on the shared task Sheet. Each star is one step of that run, in order. A star's glow grows with its share of the run's time. Change the team size and watch which step takes over.</p>
+  </header>
+
+  <p class="answer" id="answer" aria-live="polite"></p>
+
+  <div class="stage">
+    <svg id="sky" role="group" aria-label="Meeting-to-task run, one star per step"></svg>
+  </div>
+
+  <div class="controls">
+    <div class="size">
+      <label class="lbl" for="people">Team size</label>
+      <input type="range" id="people" min="0" max="1000" step="1" value="0">
+      <output id="peopleOut" for="people">100</output><span class="unit">people</span>
+    </div>
+    <div class="seg-group" role="group" aria-label="Team size presets">
+      <button type="button" data-p="10">10</button>
+      <button type="button" data-p="100">100</button>
+      <button type="button" data-p="1000">1,000</button>
+      <button type="button" data-p="5000">5,000</button>
+    </div>
+    <div class="seg-group" role="group" aria-label="Archived tasks kept">
+      <span class="lbl">Archive</span>
+      <button type="button" data-y="1">1 year</button>
+      <button type="button" data-y="3">3 years</button>
+    </div>
+    <button type="button" id="play">Follow the flow</button>
+    <div class="clock">Elapsed <b id="elapsed">0 ms</b> of <b id="total">0 ms</b></div>
+  </div>
+
+  <div class="below">
+    <article class="card" id="card" aria-live="polite"></article>
+    <div class="tblwrap">
+      <table class="tbl" id="tbl">
+        <thead><tr><th>Step</th><th>Grows with</th><th class="num">Team ×2</th><th class="num">Time</th><th class="num">Share</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="basis">
+    <p><b>What is real.</b> The steps, their order, the file and line references, the loops and the limits are read from EXO's source at commit 5362780. No EXO code was run.</p>
+    <p><b>What is measured.</b> Copies of EXO's matching functions run on made-up task titles in this container: about 4.9 µs to hash one source identity (<code>sourceActionIdentity</code>), 1 µs to build one task's comparison wording (<code>taskComparison</code>) and 8.2 µs for one title comparison (<code>similarAutomaticTask</code>). The copies use made-up titles, so EXO's real numbers may differ.</p>
+    <p><b>What is assumed.</b> Each person has 10 open tasks and archives 40 a year, and a third of tasks came from a meeting. The meeting has 20 action lines; 12 get past the early checks and 8 are added. Unit costs: 5 ms per database query, 120 ms per Google file check, 600 ms to read the notes, 6 s for the Sonnet call, 350 ms per Sheet read, 900 ms to write and read back the batch. Steps are added one after another within one cron run. The 15-minute wait for notes to settle is not counted.</p>
+  </div>
+</div>
+
+<script>
+(() => {
+  const US_HASH = 4.9, US_CMP = 0.95, US_SIM = 8.2;
+  const LINES = 20, PAST_CHECKS = 12, ADDS = 8, OPEN = 10, ARCHIVED_PER_YEAR = 40;
+  const Q = 5, GOOGLE = 120, DOC = 600, SONNET = 6000, SHEET = 350, WRITE = 900;
+  let YEARS = 1;
+  const tasksFor = P => P * (OPEN + ARCHIVED_PER_YEAR * YEARS);
+
+  // Each step: real code reference, complexity read from source, and an estimate from the assumptions on the page.
+  const STEPS = [
+    { name: 'Cron tick', code: 'src/meetings/automation-runner.ts:141',
+      what: 'The Worker\'s per-minute cron takes the background lease and picks the next meeting waiting for work. One meeting per tick.',
+      o: 'O(1)', grows: 'Nothing',
+      cost: P => ({ ms: 2 * Q, work: 'Lease update and policy row' }),
+      note: 'The lease lasts 5 minutes (automation-runner.ts:152). One meeting per minute is also this workflow\'s throughput limit.' },
+    { name: 'Check last write', code: 'src/meetings/automation-writer.ts:189',
+      what: 'Reads back any task insert from an earlier tick whose result is still uncertain, using its saved receipt.',
+      o: 'O(1)', grows: 'Nothing',
+      cost: P => ({ ms: 2 * Q, work: '2 database queries, nothing pending' }) },
+    { name: 'Wait for settled notes', code: 'src/meetings/automation-runner.ts:73',
+      what: 'Checks the Google Doc\'s version and last edit. Notes edited in the last 15 minutes wait for a later tick.',
+      o: 'O(1)', grows: 'Nothing',
+      cost: P => ({ ms: GOOGLE, work: '1 Google file check' }),
+      note: 'The 15-minute quiet period (STABLE_NOTES_MS) is waiting, not work, so it is left out of the total.' },
+    { name: 'Read meeting notes', code: 'src/meetings/automation-runner.ts:85',
+      what: 'Reads the meeting notes from Google Docs and pulls out the action lines, leaving out transcripts.',
+      o: 'O(notes length)', grows: 'Length of the notes',
+      cost: P => ({ ms: DOC, work: '1 Google Doc read' }),
+      note: 'Bounded by a 60-second read budget on the same line.' },
+    { name: 'Classify with Sonnet', code: 'src/meetings/automation-runner.ts:105',
+      what: 'Sends the action lines to Sonnet, which decides which ones are real tasks, who owns them and when they are due.',
+      o: 'O(L)', grows: 'Action lines (capped at 40)',
+      cost: P => ({ ms: SONNET, work: `1 model call for ${LINES} lines` }),
+      note: 'One call per meeting version, with a 90-second timeout. A meeting already classified at this version reuses the stored answer and skips the call.' },
+    { name: 'Read tasks and archive', code: 'src/meetings/automation-runner.ts:115',
+      what: 'Reads every open task from the shared task Sheet and every archived task, plus this meeting\'s earlier additions.',
+      o: 'O(T)', grows: 'Tasks, open and archived',
+      cost: P => { const T = tasksFor(P); return { ms: 2 * SHEET + Q + T * 2e-3, work: `2 Sheet reads, ${fmtN(T)} tasks` }; } },
+    { name: 'Plan each line', code: 'src/meetings/automation-plan.ts:55',
+      what: 'For each action line, decides add, reuse, exclude or exception. It checks whether a task already came from this line and looks for similar existing tasks.',
+      o: 'O(L · T)', grows: 'Action lines × tasks',
+      cost: P => { const T = tasksFor(P), h = LINES * T / 3, c = PAST_CHECKS * T / 2;
+        return { ms: (h * US_HASH + c * (US_CMP + US_SIM)) / 1000, work: `${fmtN(h)} identity hashes, ${fmtN(c)} title comparisons` }; },
+      note: 'Line 55 hashes every meeting-made task again for each action line. Line 78 rebuilds every task\'s comparison wording for each line, then line 80 compares titles one by one.',
+      fix: 'Possible change, not verified: work out each task\'s identity and comparison wording once per meeting, keep the identities in a Set, and only compare titles that share a word. Hashing drops to O(L + T) and most comparisons are skipped.' },
+    { name: 'Save the plan', code: 'src/meetings/automation-runner.ts:129',
+      what: 'Stores the decision for every line, with short evidence, so the Owner can see what was prepared.',
+      o: 'O(L)', grows: 'Action lines',
+      cost: P => ({ ms: 2 * Q, work: 'Policy check and 1 write' }) },
+    { name: 'Recheck duplicates', code: 'src/meetings/automation-writer.ts:117',
+      what: 'Before writing, rereads the Sheet and checks each row about to be added against every open and archived task in its tab again.',
+      o: 'O(A · T)', grows: 'Rows to add × tasks',
+      cost: P => { const T = tasksFor(P), c = ADDS * T / 2;
+        return { ms: SHEET + (c * (US_CMP + US_SIM)) / 1000 + ADDS * 2 * Q, work: `1 Sheet read, ${fmtN(c)} title comparisons, ${ADDS * 2} receipt queries` }; },
+      fix: 'Possible change, not verified: reuse the comparison wording worked out in planning, and compare only titles that share a word.' },
+    { name: 'Write and verify', code: 'src/meetings/automation-writer.ts:181',
+      what: 'Writes the new rows to the task Sheet in one batch and reads them back to prove they landed.',
+      o: 'O(A)', grows: 'Rows to add (capped at 40)',
+      cost: P => ({ ms: WRITE, work: `1 batch of ${ADDS} rows with readback` }) },
+  ];
+
+  const $ = s => document.querySelector(s);
+  const svg = $('#sky'), NS = 'http://www.w3.org/2000/svg';
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)');
+  const narrow = matchMedia('(max-width: 640px)');
+  let P = 100, sel = null, pinned = false, play = null, model, L, pulse;
+  const nodes = [];
+
+  function fmtN(n) { n = Math.round(n); return n >= 1e9 ? (n / 1e9).toFixed(1) + 'B' : n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e4 ? Math.round(n / 1e3) + 'k' : n.toLocaleString('en-US'); }
+  function fmtMs(ms) { return ms < 1 ? '<1 ms' : ms < 1000 ? Math.round(ms) + ' ms' : ms < 60000 ? (ms / 1000).toFixed(ms < 10000 ? 2 : 1) + ' s' : (ms / 60000).toFixed(1) + ' min'; }
+  const MINP = 10, MAXP = 5000;
+  const sliderToP = v => Math.round(MINP * Math.pow(MAXP / MINP, v / 1000));
+  const pToSlider = p => Math.round(1000 * Math.log(p / MINP) / Math.log(MAXP / MINP));
+  const heat = share => share >= .3 ? 'hot' : share >= .1 ? 'warm' : 'cool';
+  const heatColor = h => h === 'hot' ? 'var(--hot)' : h === 'warm' ? 'var(--warm)' : 'var(--cool)';
+  const x2text = x => x < 1.15 ? '×1' : '×' + (x < 9.5 ? x.toFixed(1).replace(/\.0$/, '') : Math.round(x));
+  const pct = s => s < .01 ? '<1%' : Math.round(s * 100) + '%';
+
+  function compute(p) {
+    const rows = STEPS.map(s => { const now = s.cost(p), dbl = s.cost(p * 2); return { s, ...now, x2: dbl.ms / Math.max(now.ms, 1e-9), added: dbl.ms - now.ms }; });
+    const total = rows.reduce((a, r) => a + r.ms, 0);
+    rows.forEach(r => r.share = r.ms / total);
+    const top = rows.reduce((a, r) => r.ms > a.ms ? r : a, rows[0]);
+    // The step that adds the most time when the team doubles.
+    const grower = rows.reduce((a, r) => r.added > a.added ? r : a, rows[0]);
+    return { rows, total, top, grower };
+  }
+  // Where the fastest-growing step overtakes today's slowest one, for the answer sentence.
+  function crossover() {
+    const g = STEPS.indexOf(model.grower.s), t = STEPS.indexOf(model.top.s);
+    for (let p = MINP; p <= 200000; p = Math.ceil(p * 1.02)) if (STEPS[g].cost(p).ms >= STEPS[t].cost(p).ms) return p;
+    return null;
+  }
+
+  const WIDE = { w: 1240, h: 460, pts: [[70,310],[188,180],[308,320],[430,180],[556,320],[684,180],[810,320],[934,180],[1056,320],[1170,180]] };
+  const TALL = { w: 400, h: 1180, pts: [[70,70],[120,185],[70,300],[125,415],[70,530],[120,645],[70,760],[125,875],[70,990],[120,1105]] };
+
+  function el(tag, attrs, text) { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; return e; }
+  function bgStars() {
+    let seed = 11; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    const g = el('g', { 'aria-hidden': 'true' });
+    for (let i = 0, n = Math.round(L.w * L.h / 5200); i < n; i++)
+      g.appendChild(el('circle', { cx: (rnd() * L.w).toFixed(1), cy: (rnd() * L.h).toFixed(1), r: rnd() < .08 ? 1.1 : (.55 + rnd() * .35).toFixed(2), fill: '#ecebe6', 'fill-opacity': (.12 + rnd() * .4).toFixed(2) }));
+    return g;
+  }
+
+  function build() {
+    L = narrow.matches ? TALL : WIDE;
+    svg.replaceChildren();
+    svg.setAttribute('viewBox', `0 0 ${L.w} ${L.h}`);
+    const defs = el('defs', {});
+    for (const [k, c] of [['cool', '#cfe0ff'], ['warm', '#ffc56b'], ['hot', '#ff6b3d']]) {
+      const gr = el('radialGradient', { id: 'au-' + k });
+      gr.append(el('stop', { offset: '0', 'stop-color': c, 'stop-opacity': '.55' }), el('stop', { offset: '.35', 'stop-color': c, 'stop-opacity': '.2' }), el('stop', { offset: '1', 'stop-color': c, 'stop-opacity': '0' }));
+      defs.appendChild(gr);
+    }
+    const auras = el('g', { 'aria-hidden': 'true' }), segs = el('g', { 'aria-hidden': 'true' }), stars = el('g', {});
+    svg.append(defs, bgStars(), auras, segs, stars);
+    nodes.length = 0;
+    L.pts.forEach(([x, y], i) => {
+      let seg = null;
+      if (i) { const [px, py] = L.pts[i - 1]; seg = el('line', { class: 'seg', x1: px, y1: py, x2: x, y2: y }); segs.appendChild(seg); }
+      const aura = el('circle', { class: 'aura', cx: x, cy: y, r: 100, fill: 'url(#au-cool)' });
+      auras.appendChild(aura);
+      const g = el('g', { class: 'star', tabindex: '0', role: 'button' });
+      g.append(el('circle', { class: 'hit', cx: x, cy: y, r: 34 }), el('circle', { class: 'ring', cx: x, cy: y, r: 13 }), el('circle', { cx: x, cy: y, r: 3.6, fill: '#ffffff' }));
+      const tall = L === TALL, below = !tall && y > 250;
+      const tx = tall ? x + 34 : x, ty = tall ? y - 8 : below ? y + 40 : y - 66, anchor = tall ? 'start' : 'middle';
+      const ms = el('text', { class: 't-ms', x: tx, y: ty + 36, 'text-anchor': anchor }, '');
+      g.append(el('text', { class: 't-name', x: tx, y: ty, 'text-anchor': anchor }, STEPS[i].name), el('text', { class: 't-o', x: tx, y: ty + 18, 'text-anchor': anchor }, STEPS[i].o), ms);
+      g.addEventListener('click', () => choose(i));
+      g.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); choose(i); } });
+      stars.appendChild(g);
+      nodes.push({ g, aura, ms, seg, x, y });
+    });
+    pulse = el('g', { 'aria-hidden': 'true', opacity: '0' });
+    pulse.append(el('circle', { r: 9, fill: 'url(#au-warm)' }), el('circle', { r: 2.6, fill: '#ffffff' }));
+    svg.appendChild(pulse);
+    render();
+  }
+
+  function render() {
+    model = compute(P);
+    const maxR = L === TALL ? 92 : 118;
+    model.rows.forEach((r, i) => {
+      const n = nodes[i], h = heat(r.share);
+      n.aura.setAttribute('fill', `url(#au-${h})`);
+      n.aura.style.transform = `scale(${((10 + maxR * Math.sqrt(r.share)) / 100).toFixed(3)})`;
+      n.ms.textContent = `${fmtMs(r.ms)} · ${pct(r.share)}`;
+      n.ms.style.fill = h === 'cool' ? 'var(--ink)' : heatColor(h);
+      n.g.setAttribute('aria-label', `${r.s.name}: ${r.s.o}, about ${fmtMs(r.ms)}, ${pct(r.share)} of the run`);
+    });
+    if (!pinned || sel == null) sel = model.rows.indexOf(model.top);
+    $('#peopleOut').textContent = P.toLocaleString('en-US');
+    $('#total').textContent = fmtMs(model.total);
+    if (!play) $('#elapsed').textContent = '0 ms';
+    document.querySelectorAll('[data-p]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.p === P)));
+    document.querySelectorAll('[data-y]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.y === YEARS)));
+    const t = model.top, g = model.grower, cls = r => heat(r.share) === 'hot' ? 'hotname' : 'warmname';
+    const who = `With ${P.toLocaleString('en-US')} people and ${fmtN(tasksFor(P))} tasks, one meeting takes about <b>${fmtMs(model.total)}</b> to process.`;
+    if (t === g) {
+      $('#answer').innerHTML = `${who} The bottleneck is <b class="${cls(t)}">${t.s.name}</b> at ${pct(t.share)}. It checks every action line against every task, so its time goes ${x2text(t.x2)} each time the team doubles and keeps growing as the archive does.`;
+    } else {
+      const at = crossover();
+      $('#answer').innerHTML = `${who} The slowest step is <b class="${cls(t)}">${t.s.name}</b> at ${pct(t.share)}, a fixed cost that does not grow with the team. The step to watch is <b class="warmname">${g.s.name}</b>: its time goes ${x2text(g.x2)} each time the team doubles${at ? ` and overtakes it at about ${at.toLocaleString('en-US')} people` : ''}.`;
+    }
+    card(); table();
+  }
+
+  function choose(i) { sel = i; pinned = true; card(); table(); }
+
+  function card() {
+    const r = model.rows[sel], s = r.s;
+    nodes.forEach((n, k) => n.g.classList.toggle('sel', k === sel));
+    $('#card').innerHTML = `
+      <div class="kicker">Step ${sel + 1} of ${STEPS.length}${r === model.top ? ' · bottleneck' : ''}${r === model.grower && r !== model.top ? ' · grows fastest' : ''}</div>
+      <h2>${s.name}</h2>
+      <p class="what">${s.what}</p>
+      <dl class="facts">
+        <dt>Code</dt><dd><code>${s.code}</code></dd>
+        <dt>Complexity</dt><dd><span class="big">${s.o}</span><span class="tag src">from source</span><br><span class="sub">Grows with ${s.grows.toLowerCase()}. L is action lines, T is tasks, A is rows to add.</span></dd>
+        <dt>Team ×2</dt><dd><span class="big">${x2text(r.x2)}</span> time</dd>
+        <dt>At ${P.toLocaleString('en-US')}</dt><dd><span class="big">${fmtMs(r.ms)}</span><span class="tag est">estimate</span><br><span class="sub">${r.work}</span></dd>
+      </dl>
+      ${s.note ? `<p class="note">${s.note}</p>` : ''}
+      ${s.fix ? `<p class="note fix">${s.fix}</p>` : ''}`;
+  }
+
+  function table() {
+    $('#tbl tbody').innerHTML = model.rows.map((r, i) => `<tr tabindex="0" data-i="${i}" class="${i === sel ? 'sel' : ''}">
+        <td>${r.s.name}<br><code>${r.s.code}</code></td>
+        <td><span class="o">${r.s.o}</span><br><span class="gw">${r.s.grows}</span></td>
+        <td class="num">${x2text(r.x2)}</td>
+        <td class="num">${fmtMs(r.ms)}</td>
+        <td class="num"><span class="bar" style="width:${Math.max(2, Math.round(r.share * 70))}px;background:${heatColor(heat(r.share))}"></span>${pct(r.share)}</td></tr>`).join('');
+  }
+  const tb = $('#tbl tbody');
+  tb.addEventListener('click', e => { const tr = e.target.closest('tr'); if (tr) choose(+tr.dataset.i); });
+  tb.addEventListener('keydown', e => { const tr = e.target.closest('tr'); if (tr && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); choose(+tr.dataset.i); } });
+
+  function setP(p, fromSlider) {
+    P = Math.max(MINP, Math.min(MAXP, p)); pinned = false;
+    if (!fromSlider) $('#people').value = pToSlider(P);
+    stopPlay(); render();
+  }
+  $('#people').addEventListener('input', e => setP(sliderToP(+e.target.value), true));
+  document.querySelectorAll('[data-p]').forEach(b => b.addEventListener('click', () => setP(+b.dataset.p)));
+  document.querySelectorAll('[data-y]').forEach(b => b.addEventListener('click', () => { YEARS = +b.dataset.y; pinned = false; stopPlay(); render(); }));
+
+  // Follow the flow: a light travels star to star and waits at each one in proportion to its share of the time.
+  const ease = t => t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+  function stopPlay() {
+    if (!play) return; cancelAnimationFrame(play.raf); play = null;
+    pulse.setAttribute('opacity', '0'); nodes.forEach(n => n.seg && n.seg.classList.remove('lit'));
+    $('#play').textContent = 'Follow the flow';
+  }
+  function startPlay() {
+    if (reduce.matches) { $('#elapsed').textContent = fmtMs(model.total); return; }
+    const plan = []; let t = 0, before = 0;
+    model.rows.forEach((r, i) => {
+      if (i) { plan.push({ move: true, i, t0: t, t1: t + 420, before }); t += 420; }
+      const d = 260 + 2600 * r.share; plan.push({ move: false, i, t0: t, t1: t + d, before, ms: r.ms }); t += d; before += r.ms;
+    });
+    play = { plan, end: t, start: performance.now(), raf: 0, at: -1 };
+    nodes.forEach(n => n.seg && n.seg.classList.remove('lit'));
+    pulse.setAttribute('opacity', '1');
+    $('#play').textContent = 'Stop';
+    const tick = now => {
+      if (!play) return;
+      const e = now - play.start, step = play.plan.find(p => e < p.t1) || play.plan[play.plan.length - 1];
+      const k = Math.min(1, (e - step.t0) / (step.t1 - step.t0)), n = nodes[step.i];
+      if (step.move) {
+        const a = nodes[step.i - 1], f = ease(k);
+        pulse.setAttribute('transform', `translate(${a.x + (n.x - a.x) * f} ${a.y + (n.y - a.y) * f})`);
+        n.seg.classList.add('lit');
+        $('#elapsed').textContent = fmtMs(step.before);
+      } else {
+        pulse.setAttribute('transform', `translate(${n.x} ${n.y})`);
+        if (play.at !== step.i) { play.at = step.i; sel = step.i; card(); table(); }
+        $('#elapsed').textContent = fmtMs(step.before + step.ms * k);
+      }
+      if (e >= play.end) {
+        $('#elapsed').textContent = fmtMs(model.total); play = null; $('#play').textContent = 'Follow again';
+        setTimeout(() => { if (!play) pulse.setAttribute('opacity', '0'); }, 900); return;
+      }
+      play.raf = requestAnimationFrame(tick);
+    };
+    play.raf = requestAnimationFrame(tick);
+  }
+  $('#play').addEventListener('click', () => { if (play) stopPlay(); else { pinned = true; startPlay(); } });
+  document.addEventListener('visibilitychange', () => { if (document.hidden) stopPlay(); });
+  narrow.addEventListener('change', () => { stopPlay(); build(); });
+
+  $('#people').value = pToSlider(P);
+  build();
+})();
+</script>
