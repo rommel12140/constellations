@@ -362,6 +362,8 @@ Read-only inspection of profitsx/exo at commit 5362780 on 13 October 2026. Nothi
 
 Implications for v1 on EXO: before/after state is mainly `exo_panel_cache` rows, captured by extending the existing instrumented-Worker wrapper to record SQL and row changes. The frontend capture records the user action and request/response pairs through a `fetch` wrapper, not React internals. The existing Playwright scripts can drive the recorded interaction. Whether EXO is the demonstration project, and who may designate it trusted before any future execution, remain owner decisions.
 
+![Conceptual Constellations view of EXO's Team panel Refresh. Code references are real (commit 5362780); recorded values are invented.](Constellations_Interface_Example_EXO.png)
+
 ### Candidate engineering direction
 
 A local-first service and web UI are plausible. A JavaScript/TypeScript starting stack, TypeScript compiler API or ts-morph, React/Vite, React Flow, Monaco, Fastify, pnpm and SQLite/FTS are candidates. The official Anthropic SDK and bounded tool retrieval could support AI integration. OpenTelemetry/W3C conventions could support recording interoperability. Vitest/Playwright could validate the product without making app orchestration a v1 feature.
