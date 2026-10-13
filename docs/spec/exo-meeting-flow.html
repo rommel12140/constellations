@@ -3,413 +3,506 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap">
 <style>
-/* Layout: one black sky holding the flow, the controls under it, then the selected star beside the full step list. Single dark look by choice. */
+/* Layout: the sky is the page. Title and run time float at the top, team size at the bottom, a star's details slide in when it is opened. Single dark look by choice. */
 :root {
   color-scheme: dark;
   --sky: #000000;
-  --ink: #ecebe6;
-  --dim: #9a9ca6;
-  --faint: #5f626e;
-  --line: rgba(236, 235, 230, .26);
+  --ink: #f1efe9;
+  --dim: #a3a5ae;
+  --faint: #62656f;
   --cool: #cfe0ff;
   --warm: #ffc56b;
-  --hot: #ff6b3d;
-  --panel: #0b0c11;
-  --rule: #23252e;
+  --hot: #ff6136;
+  --glass: rgba(8, 9, 14, .82);
+  --rule: rgba(241, 239, 233, .14);
   --f-display: "Instrument Serif", "Iowan Old Style", Georgia, serif;
   --f-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --f-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
-  --ease-travel: cubic-bezier(.4, 0, .2, 1);
   --ease-settle: cubic-bezier(.2, .8, .2, 1);
 }
-html { background: var(--sky); }
-body { background: var(--sky); color: var(--ink); font: 15px/1.55 var(--f-body); padding-inline: 16px; padding-block: 0 48px; }
-.wrap { max-width: 1240px; margin: 0 auto; display: grid; gap: 18px; }
-header { padding-block: 28px 4px; display: grid; gap: 6px; }
+html, body { background: var(--sky); }
+body { color: var(--ink); font: 15px/1.5 var(--f-body); padding-inline: 0; padding-block: 0; }
+
+.sky { position: relative; height: clamp(640px, 100svh, 940px); overflow: hidden; background: var(--sky); }
+.stage { position: absolute; inset: 0; }
+canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: pointer; }
+.labels { position: absolute; inset: 0; pointer-events: none; }
+
+.top { position: absolute; top: 0; left: 0; right: 0; padding: 22px 28px 0; display: flex; justify-content: space-between; gap: 24px; pointer-events: none; z-index: 2; }
+.title { display: grid; gap: 4px; max-width: 62ch; }
 .kicker { font: 500 11px/1.4 var(--f-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
-h1 { font: 400 clamp(30px, 4.4vw, 46px)/1.05 var(--f-display); margin: 0; text-wrap: balance; }
-h1 em { font-style: italic; color: var(--warm); }
-.lede { margin: 0; color: var(--dim); max-width: 70ch; }
+h1 { font: 400 clamp(28px, 3.4vw, 44px)/1.05 var(--f-display); margin: 0; }
+h1 em { color: var(--warm); }
+.say { margin: 4px 0 0; font-size: clamp(14px, 1.3vw, 16px); text-wrap: pretty; min-height: 3em; }
+.say b { font-weight: 600; }
+.say .hot { color: var(--hot); } .say .warm { color: var(--warm); }
 
-.answer { font-size: clamp(16px, 1.7vw, 19px); line-height: 1.45; max-width: 72ch; margin: 0; text-wrap: pretty; }
-.answer b { font-weight: 600; }
-.answer .hotname { color: var(--hot); }
-.answer .warmname { color: var(--warm); }
+.meter { text-align: right; display: grid; gap: 6px; justify-items: end; flex: none; }
+.meter .big { font: 500 clamp(26px, 3vw, 40px)/1 var(--f-mono); font-variant-numeric: tabular-nums; }
+.meter .cap { font: 500 11px/1.3 var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--dim); }
+.cpu { width: 220px; display: grid; gap: 5px; }
+.cpu .track { position: relative; height: 6px; border-radius: 3px; background: rgba(241, 239, 233, .12); overflow: hidden; }
+.cpu .fill { position: absolute; inset: 0 auto 0 0; width: 0; background: var(--cool); border-radius: 3px; transition: width 300ms var(--ease-settle), background 300ms; }
+.cpu .row { display: flex; justify-content: space-between; font: 500 11px/1 var(--f-mono); color: var(--dim); font-variant-numeric: tabular-nums; }
+.cpu .row b { color: var(--ink); font-weight: 500; }
+.cpu.over .fill { background: var(--hot); }
+.cpu.over .row b { color: var(--hot); }
 
-.stage { position: relative; width: 100%; }
-.stage svg { display: block; width: 100%; height: auto; }
-.stage text { font-family: var(--f-body); fill: var(--ink); paint-order: stroke; stroke: var(--sky); stroke-width: 4px; stroke-linejoin: round; }
-.stage .t-name { font-size: 14px; font-weight: 500; }
-.stage .t-o { font: 12px var(--f-mono); fill: var(--dim); }
-.stage .t-ms { font: 500 13px var(--f-mono); }
-.stage .star { cursor: pointer; outline: none; }
-.stage .star .hit { fill: transparent; }
-.stage .star .ring { fill: none; stroke: var(--ink); stroke-width: 1; opacity: 0; transition: opacity 160ms var(--ease-settle); }
-.stage .star:hover .ring { opacity: .45; }
-.stage .star.sel .ring { opacity: .9; }
-.stage .star:focus-visible .ring { stroke: var(--warm); opacity: 1; }
-.stage .aura { transform-box: fill-box; transform-origin: center; transition: transform 520ms var(--ease-settle); }
-.stage .seg { stroke: var(--line); stroke-width: 1; }
-.stage .seg.lit { stroke: var(--ink); stroke-opacity: .75; }
-
-.controls { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 22px; padding-block: 12px; border-block: 1px solid var(--rule); }
-.size { display: flex; align-items: center; gap: 12px; flex: 1 1 340px; min-width: 0; }
-.lbl { font: 500 11px/1 var(--f-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--dim); white-space: nowrap; }
-.size output { font: 500 22px/1 var(--f-mono); font-variant-numeric: tabular-nums; min-width: 5.2ch; text-align: right; }
-.size .unit { color: var(--dim); }
-input[type=range] { flex: 1; min-width: 110px; accent-color: var(--warm); }
-.seg-group { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-button { font: 500 13px/1 var(--f-body); color: var(--ink); background: transparent; border: 1px solid var(--rule); border-radius: 999px; padding: 9px 14px; cursor: pointer; transition: border-color 140ms var(--ease-settle), background 140ms var(--ease-settle); }
+.bottom { position: absolute; left: 0; right: 0; bottom: 0; padding: 0 28px 22px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px 22px; z-index: 2; }
+.size { display: flex; align-items: center; gap: 14px; flex: 1 1 420px; min-width: 0; padding: 12px 16px; border: 1px solid var(--rule); border-radius: 14px; background: var(--glass); }
+.size label { font: 500 11px/1 var(--f-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--dim); white-space: nowrap; }
+.size output { font: 500 26px/1 var(--f-mono); font-variant-numeric: tabular-nums; min-width: 4.6ch; text-align: right; }
+.size .unit { color: var(--dim); white-space: nowrap; font-variant-numeric: tabular-nums; }
+input[type=range] { flex: 1; min-width: 100px; accent-color: var(--warm); height: 28px; }
+.chips { display: flex; gap: 6px; align-items: center; padding: 8px 10px; border: 1px solid var(--rule); border-radius: 14px; background: var(--glass); }
+.chips span { font: 500 11px/1 var(--f-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--dim); padding: 0 6px; }
+button { font: 500 13px/1 var(--f-body); color: var(--ink); background: transparent; border: 1px solid var(--rule); border-radius: 999px; padding: 9px 13px; cursor: pointer; }
 button:hover { border-color: var(--dim); }
 button:focus-visible { outline: 2px solid var(--warm); outline-offset: 2px; }
 button[aria-pressed=true] { background: var(--ink); color: var(--sky); border-color: var(--ink); }
-#play { border-color: var(--warm); color: var(--warm); }
-#play:hover { background: rgba(255, 197, 107, .1); }
-.clock { font: 500 13px var(--f-mono); color: var(--dim); font-variant-numeric: tabular-nums; }
-.clock b { color: var(--ink); font-weight: 500; }
+.legend { color: var(--dim); font-size: 13px; display: flex; align-items: center; gap: 8px; }
+.legend i { width: 7px; height: 7px; border-radius: 50%; background: var(--ink); display: inline-block; }
 
-.below { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 20px; align-items: start; }
-.card { background: var(--panel); border: 1px solid var(--rule); border-radius: 10px; padding: 18px 20px; display: grid; gap: 12px; min-width: 0; }
-.card h2 { font: 400 28px/1.1 var(--f-display); margin: 0; }
-.card .what { margin: 0; color: var(--dim); }
-.card code, .tbl code, .basis code { font: 12.5px var(--f-mono); color: var(--cool); overflow-wrap: anywhere; }
-.facts { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 8px 16px; margin: 0; }
-.facts dt { font: 500 11px/1.6 var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
-.facts dd { margin: 0; font-variant-numeric: tabular-nums; }
-.facts .big { font: 500 18px var(--f-mono); }
-.facts .sub { color: var(--dim); }
-.tag { display: inline-block; font: 500 10.5px/1 var(--f-mono); letter-spacing: .06em; text-transform: uppercase; padding: 4px 7px; border-radius: 4px; border: 1px solid var(--rule); color: var(--dim); margin-left: 6px; vertical-align: 2px; }
-.tag.src { color: var(--cool); border-color: rgba(207, 224, 255, .3); }
-.tag.est { color: var(--warm); border-color: rgba(255, 197, 107, .35); }
-.note { margin: 0; padding: 10px 12px; border-left: 2px solid var(--faint); color: var(--dim); font-size: 14px; }
-.note.fix { border-left-color: var(--cool); background: rgba(207, 224, 255, .05); color: var(--ink); }
+.lbl { position: absolute; left: 0; top: 0; pointer-events: auto; background: none; border: 0; border-radius: 8px; padding: 4px 8px; text-align: center; color: var(--ink); display: grid; gap: 2px; white-space: nowrap; will-change: transform; }
+.lbl:hover { border: 0; background: rgba(241, 239, 233, .06); }
+.lbl .n { font: 500 14px/1.2 var(--f-body); text-shadow: 0 0 6px #000, 0 0 2px #000; }
+.lbl .o { font: 500 12px/1.2 var(--f-mono); color: var(--dim); text-shadow: 0 0 6px #000; }
+.lbl .t { font: 500 13px/1.2 var(--f-mono); font-variant-numeric: tabular-nums; text-shadow: 0 0 6px #000; transition: color 400ms; }
+.lbl .tag { justify-self: center; font: 500 10px/1 var(--f-mono); letter-spacing: .1em; text-transform: uppercase; padding: 4px 7px; border-radius: 4px; margin-top: 3px; background: var(--hot); color: #000; }
+.lbl.side { text-align: left; }
+.lbl.side.left { text-align: right; }
+.lbl.side.left .tag { justify-self: end; }
+.lbl .tag.stop { background: transparent; color: var(--hot); border: 1px solid var(--hot); }
+.lbl.side .tag { justify-self: start; }
+.lbl.dim { opacity: .35; }
+.edge { position: absolute; font: 500 11px/1.3 var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--faint); pointer-events: none; }
 
-.tblwrap { overflow-x: auto; min-width: 0; }
-.tbl { width: 100%; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
-.tbl th { text-align: left; font: 500 10.5px/1.3 var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--faint); padding: 0 10px 8px 0; border-bottom: 1px solid var(--rule); }
-.tbl td { padding: 9px 10px 9px 0; border-bottom: 1px solid var(--rule); vertical-align: top; }
-.tbl td.num, .tbl th.num { text-align: right; }
-.tbl td.num { font-family: var(--f-mono); white-space: nowrap; }
-.tbl tr { cursor: pointer; }
-.tbl tr.sel td { background: rgba(236, 235, 230, .05); }
-.tbl tr:focus-visible { outline: 2px solid var(--warm); outline-offset: -2px; }
-.tbl .o { font-family: var(--f-mono); color: var(--dim); white-space: nowrap; }
-.tbl .gw { color: var(--dim); font-size: 13px; }
-.bar { display: inline-block; height: 6px; border-radius: 3px; vertical-align: middle; margin-right: 8px; }
+.card { position: absolute; top: 50%; right: 28px; width: min(380px, calc(100% - 56px)); transform: translate(24px, -50%); opacity: 0; pointer-events: none; transition: transform 380ms var(--ease-settle), opacity 280ms var(--ease-settle); background: var(--glass); border: 1px solid var(--rule); border-radius: 16px; padding: 20px 22px; display: grid; gap: 12px; z-index: 4; }
+.card.open { transform: translate(0, -50%); opacity: 1; pointer-events: auto; }
+.card h2 { font: 400 30px/1.05 var(--f-display); margin: 0; }
+.card p { margin: 0; }
+.card dl { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 8px 14px; margin: 0; }
+.card dt { font: 500 10.5px/1.7 var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
+.card dd { margin: 0; font-variant-numeric: tabular-nums; }
+.card .bigo { font: 500 20px var(--f-mono); }
+.card .sub { color: var(--dim); }
+.card code { font: 12px var(--f-mono); color: var(--cool); overflow-wrap: anywhere; }
+.card .fix { border-left: 2px solid var(--cool); padding: 8px 10px; font-size: 14px; background: rgba(207, 224, 255, .05); }
+.card .row { display: flex; justify-content: space-between; align-items: center; }
 
-.basis { color: var(--dim); font-size: 13.5px; display: grid; gap: 6px; max-width: 92ch; }
-.basis p { margin: 0; }
-.basis b { color: var(--ink); font-weight: 500; }
+.foot { max-width: 1100px; margin: 0 auto; padding-inline: 28px; padding-block: 18px 40px; color: var(--dim); font-size: 13.5px; }
+.foot summary { cursor: pointer; color: var(--ink); }
+.foot p { margin: 8px 0 0; max-width: 95ch; }
+.foot code { font: 12px var(--f-mono); color: var(--cool); }
 
-@media (max-width: 860px) { .below { grid-template-columns: minmax(0, 1fr); } }
-@media (prefers-reduced-motion: reduce) { .stage .aura, .stage .star .ring, button { transition: none; } }
+@media (max-width: 700px) {
+  .sky { height: auto; overflow: visible; }
+  .top { position: static; flex-direction: column; padding: 20px 16px 8px; gap: 12px; }
+  .meter { justify-items: start; text-align: left; }
+  .stage { position: relative; inset: auto; }
+  .bottom { position: sticky; bottom: 0; padding: 10px 16px 12px; background: linear-gradient(to top, #000 72%, rgba(0, 0, 0, 0)); }
+  .size { flex-basis: 100%; padding: 10px 12px; gap: 10px; }
+  .size output { font-size: 22px; }
+  .size { flex-wrap: wrap; }
+  .size input[type=range] { flex-basis: 100%; order: 3; }
+  .legend { display: none; }
+  .card { position: fixed; top: auto; bottom: 12px; left: 12px; right: 12px; width: auto; transform: translate(0, 24px); max-height: 70svh; overflow: auto; }
+  .card.open { transform: none; }
+  .foot { padding-inline: 16px; }
+}
+@media (prefers-reduced-motion: reduce) { .card, .cpu .fill, .lbl .t { transition: none; } }
 </style>
 
-<div class="wrap">
-  <header>
-    <div class="kicker">EXO · Automatic meeting tasks · commit 5362780</div>
-    <h1>Which star slows the meeting-to-task run <em>as the team grows?</em></h1>
-    <p class="lede">Once a minute, EXO takes one finished meeting and turns its action lines into rows on the shared task Sheet. Each star is one step of that run, in order. A star's glow grows with its share of the run's time. Change the team size and watch which step takes over.</p>
-  </header>
-
-  <p class="answer" id="answer" aria-live="polite"></p>
-
-  <div class="stage">
-    <svg id="sky" role="group" aria-label="Meeting-to-task run, one star per step"></svg>
+<section class="sky" id="sky" aria-label="EXO automatic meeting tasks. Each dot is a meeting travelling through the steps.">
+  <div class="top">
+    <div class="title">
+      <div class="kicker">EXO · automatic meeting tasks · real code at 5362780</div>
+      <h1>Meetings travelling <em>from notes to tasks</em></h1>
+      <p class="say" id="say" aria-live="polite"></p>
+    </div>
+    <div class="meter">
+      <div class="cap">Time per meeting</div>
+      <div class="big" id="total">9.4 s</div>
+      <div class="cpu" id="cpu">
+        <div class="track"><div class="fill" id="cpuFill"></div></div>
+        <div class="row"><span>CPU <b id="cpuUsed">0.6 s</b></span><span>limit 30 s</span></div>
+      </div>
+    </div>
   </div>
-
-  <div class="controls">
+  <div class="stage" id="stage">
+    <canvas id="cv" aria-hidden="true"></canvas>
+    <div class="labels" id="labels"></div>
+  </div>
+  <div class="bottom">
     <div class="size">
-      <label class="lbl" for="people">Team size</label>
+      <label for="people">Team</label>
       <input type="range" id="people" min="0" max="1000" step="1" value="0">
-      <output id="peopleOut" for="people">100</output><span class="unit">people</span>
+      <output id="peopleOut" for="people">100</output>
+      <span class="unit" id="tasksOut">people · 5,000 tasks</span>
     </div>
-    <div class="seg-group" role="group" aria-label="Team size presets">
-      <button type="button" data-p="10">10</button>
-      <button type="button" data-p="100">100</button>
-      <button type="button" data-p="1000">1,000</button>
-      <button type="button" data-p="5000">5,000</button>
+    <div class="chips" role="group" aria-label="Archived tasks kept">
+      <span>Archive</span>
+      <button type="button" data-y="1" aria-pressed="true">1 year</button>
+      <button type="button" data-y="3" aria-pressed="false">3 years</button>
     </div>
-    <div class="seg-group" role="group" aria-label="Archived tasks kept">
-      <span class="lbl">Archive</span>
-      <button type="button" data-y="1">1 year</button>
-      <button type="button" data-y="3">3 years</button>
-    </div>
-    <button type="button" id="play">Follow the flow</button>
-    <div class="clock">Elapsed <b id="elapsed">0 ms</b> of <b id="total">0 ms</b></div>
+    <div class="legend"><i></i> one meeting · more people, more meetings · clock sped up</div>
   </div>
+  <aside class="card" id="card" aria-live="polite"></aside>
+</section>
 
-  <div class="below">
-    <article class="card" id="card" aria-live="polite"></article>
-    <div class="tblwrap">
-      <table class="tbl" id="tbl">
-        <thead><tr><th>Step</th><th>Grows with</th><th class="num">Team ×2</th><th class="num">Time</th><th class="num">Share</th></tr></thead>
-        <tbody></tbody>
-      </table>
-    </div>
-  </div>
-
-  <div class="basis">
-    <p><b>What is real.</b> The steps, their order, the file and line references, the loops and the limits are read from EXO's source at commit 5362780. No EXO code was run.</p>
-    <p><b>What is measured.</b> Copies of EXO's matching functions run on made-up task titles in this container: about 4.9 µs to hash one source identity (<code>sourceActionIdentity</code>), 1 µs to build one task's comparison wording (<code>taskComparison</code>) and 8.2 µs for one title comparison (<code>similarAutomaticTask</code>). The copies use made-up titles, so EXO's real numbers may differ.</p>
-    <p><b>What is assumed.</b> Each person has 10 open tasks and archives 40 a year, and a third of tasks came from a meeting. The meeting has 20 action lines; 12 get past the early checks and 8 are added. Unit costs: 5 ms per database query, 120 ms per Google file check, 600 ms to read the notes, 6 s for the Sonnet call, 350 ms per Sheet read, 900 ms to write and read back the batch. Steps are added one after another within one cron run. The 15-minute wait for notes to settle is not counted.</p>
-  </div>
+<div class="foot">
+  <details>
+    <summary>What is real, measured and assumed</summary>
+    <p><b>Real:</b> the steps, their order, the loops, the line references, the cron every minute and the Worker's 30-second CPU limit (<code>wrangler.jsonc:135</code>) come from EXO's source at commit 5362780. No EXO code was run.</p>
+    <p><b>Measured:</b> copies of EXO's matching functions, timed on made-up task titles in this container: 4.9 µs per identity hash, 1 µs per comparison wording, 8.2 µs per title comparison.</p>
+    <p><b>Assumed:</b> 10 open tasks per person plus 40 archived per year; a third of tasks came from meetings; 20 action lines, 12 reach the duplicate check, 8 are added. 120 ms per Google file check, 600 ms to read the notes, 6 s for the Sonnet call, 350 ms per Sheet read, 5 ms per database query, 900 ms to write and read back the rows. CPU counts only matching and parsing, not waiting on Google or Sonnet. The 15-minute wait for notes to settle is left out.</p>
+    <p><b>Simplified:</b> dots arrive faster as the team grows and the clock is sped up, so the crowd at each star shows where meetings spend their time. EXO itself takes one meeting per cron tick, so a real backlog would wait at the start rather than at each star.</p>
+  </details>
 </div>
 
 <script>
 (() => {
-  const US_HASH = 4.9, US_CMP = 0.95, US_SIM = 8.2;
-  const LINES = 20, PAST_CHECKS = 12, ADDS = 8, OPEN = 10, ARCHIVED_PER_YEAR = 40;
-  const Q = 5, GOOGLE = 120, DOC = 600, SONNET = 6000, SHEET = 350, WRITE = 900;
-  let YEARS = 1;
-  const tasksFor = P => P * (OPEN + ARCHIVED_PER_YEAR * YEARS);
+  // ---------- Cost model: real loops, measured unit costs, stated assumptions ----------
+  const US_HASH = 4.9, US_CMP = 0.95, US_SIM = 8.2, US_PARSE = 2;
+  const L = 20, PAST = 12, A = 8, OPEN = 10, ARCH = 40, Q = 5, GOOGLE = 120, DOC = 600, SONNET = 6000, SHEET = 350, WRITE = 900, CPU_LIMIT = 30000;
+  let YEARS = 1, P = 100;
+  const tasks = p => p * (OPEN + ARCH * YEARS);
 
-  // Each step: real code reference, complexity read from source, and an estimate from the assumptions on the page.
   const STEPS = [
-    { name: 'Cron tick', code: 'src/meetings/automation-runner.ts:141',
-      what: 'The Worker\'s per-minute cron takes the background lease and picks the next meeting waiting for work. One meeting per tick.',
-      o: 'O(1)', grows: 'Nothing',
-      cost: P => ({ ms: 2 * Q, work: 'Lease update and policy row' }),
-      note: 'The lease lasts 5 minutes (automation-runner.ts:152). One meeting per minute is also this workflow\'s throughput limit.' },
-    { name: 'Check last write', code: 'src/meetings/automation-writer.ts:189',
-      what: 'Reads back any task insert from an earlier tick whose result is still uncertain, using its saved receipt.',
-      o: 'O(1)', grows: 'Nothing',
-      cost: P => ({ ms: 2 * Q, work: '2 database queries, nothing pending' }) },
-    { name: 'Wait for settled notes', code: 'src/meetings/automation-runner.ts:73',
-      what: 'Checks the Google Doc\'s version and last edit. Notes edited in the last 15 minutes wait for a later tick.',
-      o: 'O(1)', grows: 'Nothing',
-      cost: P => ({ ms: GOOGLE, work: '1 Google file check' }),
-      note: 'The 15-minute quiet period (STABLE_NOTES_MS) is waiting, not work, so it is left out of the total.' },
-    { name: 'Read meeting notes', code: 'src/meetings/automation-runner.ts:85',
-      what: 'Reads the meeting notes from Google Docs and pulls out the action lines, leaving out transcripts.',
-      o: 'O(notes length)', grows: 'Length of the notes',
-      cost: P => ({ ms: DOC, work: '1 Google Doc read' }),
-      note: 'Bounded by a 60-second read budget on the same line.' },
-    { name: 'Classify with Sonnet', code: 'src/meetings/automation-runner.ts:105',
-      what: 'Sends the action lines to Sonnet, which decides which ones are real tasks, who owns them and when they are due.',
-      o: 'O(L)', grows: 'Action lines (capped at 40)',
-      cost: P => ({ ms: SONNET, work: `1 model call for ${LINES} lines` }),
-      note: 'One call per meeting version, with a 90-second timeout. A meeting already classified at this version reuses the stored answer and skips the call.' },
-    { name: 'Read tasks and archive', code: 'src/meetings/automation-runner.ts:115',
-      what: 'Reads every open task from the shared task Sheet and every archived task, plus this meeting\'s earlier additions.',
-      o: 'O(T)', grows: 'Tasks, open and archived',
-      cost: P => { const T = tasksFor(P); return { ms: 2 * SHEET + Q + T * 2e-3, work: `2 Sheet reads, ${fmtN(T)} tasks` }; } },
-    { name: 'Plan each line', code: 'src/meetings/automation-plan.ts:55',
-      what: 'For each action line, decides add, reuse, exclude or exception. It checks whether a task already came from this line and looks for similar existing tasks.',
-      o: 'O(L · T)', grows: 'Action lines × tasks',
-      cost: P => { const T = tasksFor(P), h = LINES * T / 3, c = PAST_CHECKS * T / 2;
-        return { ms: (h * US_HASH + c * (US_CMP + US_SIM)) / 1000, work: `${fmtN(h)} identity hashes, ${fmtN(c)} title comparisons` }; },
-      note: 'Line 55 hashes every meeting-made task again for each action line. Line 78 rebuilds every task\'s comparison wording for each line, then line 80 compares titles one by one.',
-      fix: 'Possible change, not verified: work out each task\'s identity and comparison wording once per meeting, keep the identities in a Set, and only compare titles that share a word. Hashing drops to O(L + T) and most comparisons are skipped.' },
-    { name: 'Save the plan', code: 'src/meetings/automation-runner.ts:129',
-      what: 'Stores the decision for every line, with short evidence, so the Owner can see what was prepared.',
-      o: 'O(L)', grows: 'Action lines',
-      cost: P => ({ ms: 2 * Q, work: 'Policy check and 1 write' }) },
-    { name: 'Recheck duplicates', code: 'src/meetings/automation-writer.ts:117',
-      what: 'Before writing, rereads the Sheet and checks each row about to be added against every open and archived task in its tab again.',
-      o: 'O(A · T)', grows: 'Rows to add × tasks',
-      cost: P => { const T = tasksFor(P), c = ADDS * T / 2;
-        return { ms: SHEET + (c * (US_CMP + US_SIM)) / 1000 + ADDS * 2 * Q, work: `1 Sheet read, ${fmtN(c)} title comparisons, ${ADDS * 2} receipt queries` }; },
-      fix: 'Possible change, not verified: reuse the comparison wording worked out in planning, and compare only titles that share a word.' },
-    { name: 'Write and verify', code: 'src/meetings/automation-writer.ts:181',
-      what: 'Writes the new rows to the task Sheet in one batch and reads them back to prove they landed.',
-      o: 'O(A)', grows: 'Rows to add (capped at 40)',
-      cost: P => ({ ms: WRITE, work: `1 batch of ${ADDS} rows with readback` }) },
+    { key: 'tick', name: 'Every minute', o: 'O(1)', grows: 'nothing',
+      holds: 'A cron tick. It takes the background lease and checks that the last write landed.',
+      code: 'src/meetings/automation-runner.ts:141', cost: p => ({ wait: 4 * Q, cpu: 0 }) },
+    { key: 'doc', name: 'Read the notes', o: 'O(notes)', grows: 'the length of the notes',
+      holds: 'The meeting notes from Google Docs, once they have gone 15 minutes without an edit.',
+      code: 'src/meetings/automation-runner.ts:85', cost: p => ({ wait: GOOGLE + DOC, cpu: 0 }) },
+    { key: 'ai', name: 'Sonnet sorts the lines', o: 'O(L)', grows: 'action lines, capped at 40',
+      holds: `The ${L} action lines. Sonnet decides which are real tasks, who owns them and when they are due.`,
+      code: 'src/meetings/automation-runner.ts:105', cost: p => ({ wait: SONNET, cpu: 0 }) },
+    { key: 'load', name: 'Load every task', o: 'O(T)', grows: 'tasks, open and archived',
+      holds: 'Every open task in the shared Sheet and every archived task.',
+      code: 'src/meetings/automation-runner.ts:115', cost: p => ({ wait: 2 * SHEET + Q, cpu: tasks(p) * US_PARSE / 1000 }) },
+    { key: 'plan', name: 'Plan each line', o: 'O(L × T)', grows: 'action lines × tasks',
+      holds: 'Each action line, checked against every task: was it added before, and is there a similar task already?',
+      code: 'src/meetings/automation-plan.ts:55', cost: p => { const T = tasks(p); return { wait: 2 * Q, cpu: (L * T / 3 * US_HASH + PAST * T / 2 * (US_CMP + US_SIM)) / 1000 }; },
+      fix: 'Possible change, not verified: work out each task\'s identity and wording once per meeting, keep identities in a Set and compare only titles that share a word. Hashing becomes O(L + T).' },
+    { key: 'recheck', name: 'Recheck before writing', o: 'O(A × T)', grows: 'rows to add × tasks',
+      holds: `The ${A} rows about to be added, each checked again against every task in its tab.`,
+      code: 'src/meetings/automation-writer.ts:117', cost: p => ({ wait: SHEET + A * 2 * Q, cpu: A * tasks(p) / 2 * (US_CMP + US_SIM) / 1000 }),
+      fix: 'Possible change, not verified: reuse the wording worked out while planning instead of rebuilding it for every row.' },
+    { key: 'write', name: 'Write the rows', o: 'O(A)', grows: 'rows to add, capped at 40',
+      holds: `The ${A} new tasks, written to the Sheet in one batch and read back to prove they landed.`,
+      code: 'src/meetings/automation-writer.ts:181', cost: p => ({ wait: WRITE, cpu: 0 }) },
   ];
+  const N = STEPS.length;
 
-  const $ = s => document.querySelector(s);
-  const svg = $('#sky'), NS = 'http://www.w3.org/2000/svg';
-  const reduce = matchMedia('(prefers-reduced-motion: reduce)');
-  const narrow = matchMedia('(max-width: 640px)');
-  let P = 100, sel = null, pinned = false, play = null, model, L, pulse;
-  const nodes = [];
+  let M;
+  function model(p) {
+    const rows = STEPS.map(s => { const c = s.cost(p), d = s.cost(p * 2), ms = c.wait + c.cpu; return { s, ms, cpu: c.cpu, x2: (d.wait + d.cpu) / ms }; });
+    const total = rows.reduce((a, r) => a + r.ms, 0), cpu = rows.reduce((a, r) => a + r.cpu, 0);
+    rows.forEach(r => r.share = r.ms / total);
+    // Where the run would be stopped: the step during which total CPU passes the limit, and how far into it.
+    let stop = null, acc = 0;
+    rows.forEach((r, i) => { if (stop === null && r.cpu > 0 && acc + r.cpu >= CPU_LIMIT) stop = { i, at: (CPU_LIMIT - acc) / r.cpu }; acc += r.cpu; });
+    let limitAt = null;
+    for (let q = 10; q <= 100000; q = Math.ceil(q * 1.01)) if (STEPS.reduce((a, s) => a + s.cost(q).cpu, 0) >= CPU_LIMIT) { limitAt = q; break; }
+    const top = rows.reduce((a, r) => r.ms > a.ms ? r : a);
+    const grow = rows.reduce((a, r) => r.ms * (r.x2 - 1) > a.ms * (a.x2 - 1) ? r : a);
+    return { rows, total, cpu, stop, limitAt, top, grow };
+  }
+  const fmtMs = ms => ms < 1 ? '<1 ms' : ms < 1000 ? Math.round(ms) + ' ms' : ms < 60000 ? (ms / 1000).toFixed(ms < 10000 ? 1 : 0) + ' s' : (ms / 60000).toFixed(1) + ' min';
+  const fmtN = n => n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e4 ? Math.round(n / 1e3) + 'k' : Math.round(n).toLocaleString('en-US');
+  const x2 = x => x < 1.1 ? '×1' : '×' + x.toFixed(1).replace(/\.0$/, '');
 
-  function fmtN(n) { n = Math.round(n); return n >= 1e9 ? (n / 1e9).toFixed(1) + 'B' : n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e4 ? Math.round(n / 1e3) + 'k' : n.toLocaleString('en-US'); }
-  function fmtMs(ms) { return ms < 1 ? '<1 ms' : ms < 1000 ? Math.round(ms) + ' ms' : ms < 60000 ? (ms / 1000).toFixed(ms < 10000 ? 2 : 1) + ' s' : (ms / 60000).toFixed(1) + ' min'; }
+  // ---------- Scene ----------
+  const $ = id => document.getElementById(id);
+  const cv = $('cv'), ctx = cv.getContext('2d'), labelsEl = $('labels'), sky = $('sky'), stage = $('stage');
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)'), narrow = matchMedia('(max-width: 700px)');
+  const WIDE = { w: 1400, h: 640, pts: [[150, 400], [330, 255], [520, 385], [715, 230], [915, 370], [1110, 235], [1280, 380]], in: [-40, 470], out: [1450, 300] };
+  const TALL = { w: 400, h: 1460, pts: [[110, 150], [270, 350], [110, 550], [270, 750], [110, 950], [270, 1150], [130, 1340]], in: [110, -40], out: [300, 1500] };
+  let W = 0, H = 0, DPR = 1, world = WIDE, cam = {}, camTo = null, open = -1, bg = null;
+  const COOL = [207, 224, 255], WARM = [255, 197, 107], HOT = [255, 97, 54];
+
+  function smokeSprite() {
+    const s = 256, c = document.createElement('canvas'); c.width = c.height = s; const g = c.getContext('2d');
+    let seed = 3; const r = () => (seed = seed * 16807 % 2147483647) / 2147483647;
+    for (let i = 0; i < 48; i++) {
+      const a = r() * 6.283, d = Math.pow(r(), .7) * s * .3, x = s / 2 + Math.cos(a) * d, y = s / 2 + Math.sin(a) * d, rad = s * (.08 + r() * .16);
+      const gr = g.createRadialGradient(x, y, 0, x, y, rad); gr.addColorStop(0, `rgba(255,255,255,${.1 + r() * .1})`); gr.addColorStop(1, 'rgba(255,255,255,0)');
+      g.fillStyle = gr; g.beginPath(); g.arc(x, y, rad, 0, 7); g.fill();
+    }
+    const core = g.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
+    core.addColorStop(0, 'rgba(255,255,255,.35)'); core.addColorStop(.25, 'rgba(255,255,255,.12)'); core.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = core; g.fillRect(0, 0, s, s);
+    return c;
+  }
+  // Tinted smoke, regenerated only when a star's colour moves to a new step of 24.
+  const SMOKE = smokeSprite(), tintCache = new Map();
+  function tinted(rgb) {
+    const key = rgb.map(v => Math.round(v / 12) * 12).join(',');
+    let c = tintCache.get(key); if (c) return c;
+    c = document.createElement('canvas'); c.width = c.height = 256; const g = c.getContext('2d');
+    g.drawImage(SMOKE, 0, 0); g.globalCompositeOperation = 'source-in'; g.fillStyle = `rgb(${key})`; g.fillRect(0, 0, 256, 256);
+    tintCache.set(key, c); return c;
+  }
+  const mix = (a, b, t) => a.map((v, k) => v + (b[k] - v) * t);
+  const heatColor = h => h < .5 ? mix(COOL, WARM, h * 2) : mix(WARM, HOT, (h - .5) * 2);
+
+  let seedR = 9; const rnd = () => (seedR = seedR * 16807 % 2147483647) / 2147483647;
+  const DUST = Array.from({ length: 600 }, () => ({ a: rnd() * 6.283, r: rnd(), s: .6 + rnd() * .8, b: .3 + rnd() * .6 }));
+  const nodes = STEPS.map(() => ({ crowd: 0, share: 0, heat: 0 }));
+
+  function buildLabels() {
+    labelsEl.replaceChildren();
+    STEPS.forEach((s, i) => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'lbl' + (world === TALL ? ' side' : '');
+      b.innerHTML = `<span class="n">${s.name}</span><span class="o">${s.o}</span><span class="t"></span><span class="tag" hidden>Bottleneck</span><span class="tag stop" hidden>Stopped · CPU limit</span>`;
+      b.addEventListener('click', e => { e.stopPropagation(); toggle(i); });
+      labelsEl.appendChild(b); if (world === TALL && world.pts[i][0] > 200) b.classList.add('left');
+      Object.assign(nodes[i], { lbl: b, t: b.querySelector('.t'), tag: b.querySelector('.tag'), stopTag: b.querySelector('.tag.stop'), last: '' });
+    });
+    for (const [txt, k] of [['New meetings', 'in'], ['Task Sheet', 'out']]) { const d = document.createElement('div'); d.className = 'edge'; d.textContent = txt; d.dataset.k = k; labelsEl.appendChild(d); }
+  }
+  function fit() {
+    world = narrow.matches ? TALL : WIDE;
+    W = Math.round(stage.getBoundingClientRect().width);
+    if (narrow.matches) { H = Math.round(W * world.h / world.w); stage.style.height = H + 'px'; }
+    else { stage.style.height = ''; H = Math.round(sky.getBoundingClientRect().height); }
+    DPR = Math.min(devicePixelRatio || 1, narrow.matches ? 1.5 : 2);
+    cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+    buildLabels(); drawBg(); cam = homeCam(); camTo = null;
+  }
+  function homeCam() {
+    if (world === TALL) return { x: world.w / 2, y: world.h / 2, z: W / world.w, ax: W / 2, ay: H / 2 };
+    const top = 150, bot = 110, z = Math.min(W / world.w, (H - top - bot) / world.h);
+    return { x: world.w / 2, y: world.h / 2, z, ax: W / 2, ay: top + (H - top - bot) / 2 };
+  }
+  const toScreen = (x, y) => [(x - cam.x) * cam.z + cam.ax, (y - cam.y) * cam.z + cam.ay];
+  function drawBg() {
+    bg = document.createElement('canvas'); bg.width = cv.width; bg.height = cv.height;
+    const g = bg.getContext('2d'); let s = 5; const r = () => (s = s * 16807 % 2147483647) / 2147483647;
+    g.fillStyle = '#000'; g.fillRect(0, 0, bg.width, bg.height);
+    for (let i = 0, n = Math.round(W * H / 2600); i < n; i++) { const big = r() < .06; g.fillStyle = `rgba(241,239,233,${(.1 + r() * .42).toFixed(2)})`; const sz = (big ? 1.6 : .9) * DPR; g.fillRect(r() * bg.width, r() * bg.height, sz, sz); }
+  }
+
+  // ---------- Traversal: every dot is one meeting going star to star ----------
+  // A dot waits at each star for that step's time (sped up), so slow steps collect a crowd.
+  const MOVE = 850, SPEED = .8;
+  const dwell = i => 220 + Math.min(M.rows[i].ms, 40000) * SPEED;
+  const rate = () => Math.min(narrow.matches ? 8 : 14, Math.max(.12, P / 100));
+  let dots = [], sparks = [], spawnAcc = 0, lastT = 0;
+  function spawn(now) { dots.push({ leg: 0, t0: now, dur: MOVE * 1.4, stay: false, a: rnd() * 6.283, rr: 0, spin: .6 + rnd() * .8 }); }
+  const pt = j => j < 0 ? world.in : j >= N ? world.out : world.pts[j];
+  function step(now, dt) {
+    spawnAcc += dt / 1000 * rate();
+    while (spawnAcc >= 1) { spawnAcc -= 1 + (rnd() - .5) * .6; spawn(now); }
+    for (const d of dots) {
+      if (now - d.t0 < d.dur) continue;
+      if (!d.stay) {
+        if (d.leg >= N) { d.dead = true; continue; }
+        const i = d.leg, crowd = nodes[i].crowd;
+        d.stay = true; d.t0 = now; d.dur = dwell(i); d.rr = 30 + rnd() * (8 + Math.sqrt(crowd) * 7);
+        if (M.stop && M.stop.i === i) { d.dur *= M.stop.at; d.die = true; }
+      } else {
+        if (d.die) { d.dead = true; const [x, y] = world.pts[d.leg]; sparks.push({ x: x + Math.cos(d.a) * d.rr, y: y + Math.sin(d.a) * d.rr, t0: now }); continue; }
+        d.stay = false; d.leg++; d.t0 = now; d.dur = d.leg >= N ? MOVE * 1.6 : MOVE;
+      }
+    }
+    dots = dots.filter(d => !d.dead);
+    sparks = sparks.filter(s => now - s.t0 < 900);
+    // Live crowd at each star, smoothed into a share; the model's share keeps quiet skies stable.
+    const counts = new Array(N).fill(0); let staying = 0;
+    for (const d of dots) if (d.stay) { counts[d.leg]++; staying++; }
+    const k = 4;
+    nodes.forEach((n, i) => {
+      n.crowd = counts[i];
+      const target = (counts[i] + k * M.rows[i].share) / (staying + k);
+      n.share += (target - n.share) * Math.min(1, dt / 700);
+      const h = Math.min(1, Math.max(0, (n.share - .06) / .3));
+      n.heat += (h - n.heat) * Math.min(1, dt / 500);
+    });
+  }
+
+  const ease = t => t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+  function drawLinks() {
+    ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(241,239,233,.17)'; ctx.setLineDash([]);
+    ctx.beginPath();
+    for (let j = -1; j < N; j++) { const [ax, ay] = toScreen(...pt(j)), [bx, by] = toScreen(...pt(j + 1)); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); }
+    ctx.stroke();
+  }
+  function drawStar(i, now) {
+    const n = nodes[i], r = M.rows[i], [x, y] = toScreen(...world.pts[i]), z = cam.z, s = STEPS[i];
+    const focus = open < 0 || open === i ? 1 : .3, rgb = heatColor(n.heat);
+    const R = (30 + 150 * Math.sqrt(n.share) + Math.sqrt(n.crowd) * 3) * z;
+    ctx.globalCompositeOperation = 'lighter';
+    const tex = tinted(rgb);
+    for (let k = 0; k < 3; k++) {
+      const rot = (reduce.matches ? 0 : now) * (k % 2 ? -1 : 1) * (.00004 + k * .00002) + k * 2.1, sc = R * (1.05 + k * .22);
+      ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ctx.globalAlpha = (.8 - k * .2) * focus;
+      ctx.drawImage(tex, -sc, -sc, sc * 2, sc * 2); ctx.restore();
+    }
+    ctx.globalCompositeOperation = 'source-over';
+    // Task stars carry a dust ring of tasks; it thickens as the Sheet and archive grow.
+    if (s.key === 'load' || s.key === 'plan' || s.key === 'recheck') {
+      const T = tasks(P), count = Math.min(DUST.length, Math.round(30 + 95 * Math.log10(T / 100 + 1))), band = 8 + 10 * Math.log10(T / 500 + 1);
+      ctx.fillStyle = `rgb(${rgb.join(',')})`;
+      const t = reduce.matches ? 0 : now / 1000;
+      for (let k = 0; k < count; k++) { const d = DUST[k], a = d.a + t * .04 * d.s, rr = (16 + d.r * band) * z; ctx.globalAlpha = focus * d.b * .7; ctx.fillRect(x + Math.cos(a) * rr, y + Math.sin(a) * rr * .9, 1.3 * z, 1.3 * z); }
+      ctx.globalAlpha = 1;
+    }
+    ctx.globalAlpha = focus; ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(x, y, (4.5 + 4 * Math.sqrt(n.share)) * z, 0, 7); ctx.fill();
+    if (open === i) { ctx.strokeStyle = 'rgba(241,239,233,.8)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(x, y, 14 * z, 0, 7); ctx.stroke(); }
+    ctx.globalAlpha = 1;
+  }
+  function drawDots(now) {
+    const z = cam.z, t = now / 1000;
+    ctx.globalCompositeOperation = 'lighter';
+    for (const d of dots) {
+      let wx, wy;
+      if (d.stay) {
+        const [cx, cy] = world.pts[d.leg], a = d.a + t * d.spin * (1.4 - Math.min(1, d.rr / 90));
+        wx = cx + Math.cos(a) * d.rr; wy = cy + Math.sin(a) * d.rr * .9;
+        if (d.die) { const k = (now - d.t0) / d.dur; ctx.fillStyle = `rgba(255,${Math.round(240 - 150 * k)},${Math.round(230 - 190 * k)},.95)`; }
+        else ctx.fillStyle = 'rgba(255,248,236,.92)';
+      } else {
+        const k = ease(Math.min(1, (now - d.t0) / d.dur)), [ax, ay] = pt(d.leg - 1), [bx, by] = pt(d.leg);
+        wx = ax + (bx - ax) * k; wy = ay + (by - ay) * k;
+        ctx.fillStyle = 'rgba(255,214,150,.95)';
+        const [tx, ty] = toScreen(ax + (bx - ax) * Math.max(0, k - .06), ay + (by - ay) * Math.max(0, k - .06)), [sx, sy] = toScreen(wx, wy);
+        ctx.strokeStyle = 'rgba(255,197,107,.35)'; ctx.lineWidth = 2 * Math.max(z, .6); ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(sx, sy); ctx.stroke();
+      }
+      const [sx, sy] = toScreen(wx, wy);
+      ctx.beginPath(); ctx.arc(sx, sy, 2.4 * Math.max(z, .7), 0, 7); ctx.fill();
+    }
+    for (const s of sparks) {
+      const k = (now - s.t0) / 900, [sx, sy] = toScreen(s.x, s.y);
+      ctx.strokeStyle = `rgba(255,97,54,${1 - k})`; ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.arc(sx, sy, (3 + k * 14) * Math.max(cam.z, .7), 0, 7); ctx.stroke();
+    }
+    ctx.globalCompositeOperation = 'source-over';
+  }
+  function placeLabels() {
+    const busiest = nodes.reduce((a, n, i) => n.share > nodes[a].share ? i : a, 0);
+    nodes.forEach((n, i) => {
+      const [x, y] = toScreen(...world.pts[i]);
+      const off = (34 + 150 * Math.sqrt(n.share) * .45) * cam.z + 10;
+      const left = world === TALL && world.pts[i][0] > 200;
+      const lx = world === TALL ? x + (left ? -54 : 54) * cam.z : x, ly = world === TALL ? y : y + off;
+      const key = `${Math.round(lx)},${Math.round(ly)}`;
+      if (key !== n.last) { n.last = key; n.lbl.style.transform = world === TALL ? `translate(${Math.round(lx)}px,${Math.round(ly)}px) translate(${left ? '-100%' : '0'},-50%)` : `translate(${Math.round(lx)}px,${Math.round(ly)}px) translate(-50%,0)`; }
+      const stopped = !!M.stop && M.stop.i === i;
+      if (n.stopTag.hidden === stopped) n.stopTag.hidden = !stopped;
+      const hot = i === busiest && n.heat > .7 && !stopped;
+      if (n.tag.hidden === hot) n.tag.hidden = !hot;
+      const col = `rgb(${heatColor(n.heat).map(Math.round).join(',')})`;
+      if (n.col !== col) { n.col = col; n.t.style.color = n.heat < .15 ? 'var(--ink)' : col; }
+      n.lbl.classList.toggle('dim', open >= 0 && open !== i);
+    });
+    labelsEl.querySelectorAll('.edge').forEach(e => {
+      const j = e.dataset.k === 'in' ? 0 : N - 1, [ax, ay] = toScreen(...world.pts[j]), [bx, by] = toScreen(...(e.dataset.k === 'in' ? world.in : world.out));
+      const f = e.dataset.k === 'in' ? .7 : .55, mx = ax + (bx - ax) * f, my = ay + (by - ay) * f;
+      e.style.transform = world === TALL ? `translate(${Math.round(Math.min(mx + 12, W - 110))}px,${Math.round(my)}px)` : `translate(${Math.round(Math.min(Math.max(mx - 40, 8), W - 110))}px,${Math.round(my - 34)}px)`;
+    });
+  }
+
+  let raf = 0, visible = true;
+  function frame(now) {
+    raf = 0;
+    const dt = Math.min(64, lastT ? now - lastT : 16); lastT = now;
+    if (camTo) {
+      const k = 1 - Math.pow(.86, dt / 16);
+      for (const p of ['x', 'y', 'z', 'ax', 'ay']) cam[p] += (camTo[p] - cam[p]) * k;
+      if (Math.abs(cam.z - camTo.z) < .002 && Math.abs(cam.x - camTo.x) < .2) { cam = { ...camTo }; camTo = null; }
+    }
+    if (!reduce.matches) step(now, dt);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.drawImage(bg, 0, 0, W, H);
+    drawLinks();
+    for (let i = 0; i < N; i++) drawStar(i, now);
+    if (!reduce.matches) drawDots(now);
+    placeLabels();
+    if ((visible && !reduce.matches) || camTo) raf = requestAnimationFrame(frame);
+    else lastT = 0;
+  }
+  const kick = () => { if (!raf) raf = requestAnimationFrame(frame); };
+
+  // ---------- Interface ----------
+  function render() {
+    M = model(P);
+    M.rows.forEach((r, i) => {
+      const n = nodes[i];
+      n.t.textContent = `${fmtMs(r.ms)} per meeting`;
+      n.lbl.setAttribute('aria-label', `${r.s.name}, ${r.s.o}, about ${fmtMs(r.ms)} per meeting, ${Math.round(r.share * 100)} percent. Open details.`);
+      if (reduce.matches) { n.share = r.share; n.heat = Math.min(1, Math.max(0, (r.share - .06) / .3)); }
+    });
+    const T = tasks(P), over = !!M.stop;
+    $('peopleOut').textContent = P.toLocaleString('en-US');
+    $('tasksOut').textContent = `people · ${fmtN(T)} tasks`;
+    $('total').textContent = fmtMs(M.total);
+    $('cpuUsed').textContent = fmtMs(M.cpu);
+    $('cpuFill').style.width = Math.min(100, M.cpu / CPU_LIMIT * 100) + '%';
+    $('cpu').classList.toggle('over', over);
+    const t = M.top, g = M.grow;
+    $('say').innerHTML = over
+      ? `Past EXO's 30-second CPU limit. Meetings are stopped at <b class="hot">${M.rows[M.stop.i].s.name}</b> and never reach the task Sheet.`
+      : t === g
+        ? `Meetings now pile up at <b class="hot">${t.s.name}</b>. Its work grows ${x2(t.x2)} each time the team doubles${M.limitAt ? `; the CPU limit is hit at about ${M.limitAt.toLocaleString('en-US')} people` : ''}.`
+        : `Meetings wait longest at <b class="hot">${t.s.name}</b>, which does not grow. <b class="warm">${g.s.name}</b> grows ${x2(g.x2)} each time the team doubles${M.limitAt ? ` and hits the CPU limit at about ${M.limitAt.toLocaleString('en-US')} people` : ''}.`;
+    document.querySelectorAll('[data-y]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.y === YEARS)));
+    if (open >= 0) card(open);
+    kick();
+  }
+  function card(i) {
+    const r = M.rows[i], s = r.s;
+    $('card').innerHTML = `
+      <div class="row"><span class="kicker">Step ${i + 1} of ${N}</span><button type="button" id="back">Back to all</button></div>
+      <h2>${s.name}</h2>
+      <p>${s.holds}</p>
+      <dl>
+        <dt>Grows with</dt><dd><span class="bigo">${s.o}</span><br><span class="sub">${s.grows}</span></dd>
+        <dt>Team ×2</dt><dd>${x2(r.x2)} time</dd>
+        <dt>At ${P.toLocaleString('en-US')}</dt><dd>${fmtMs(r.ms)} per meeting<br><span class="sub">${r.cpu > 1 ? fmtMs(r.cpu) + ' of it is CPU' : 'Waiting on a service, not CPU'}</span></dd>
+        <dt>Code</dt><dd><code>${s.code}</code></dd>
+      </dl>
+      ${s.fix ? `<p class="fix">${s.fix}</p>` : ''}`;
+    $('back').addEventListener('click', () => toggle(i));
+  }
+  function toggle(i) {
+    if (open === i) { open = -1; $('card').classList.remove('open'); camTo = homeCam(); nodes[i].lbl.focus({ preventScroll: true }); }
+    else {
+      open = i; card(i); $('card').classList.add('open');
+      const [wx, wy] = world.pts[i], h = homeCam();
+      camTo = world === TALL ? { x: wx, y: wy, z: h.z * 1.5, ax: W / 2, ay: Math.min(H / 2, innerHeight * .3) } : { x: wx, y: wy, z: h.z * 2, ax: W * .36, ay: H * .5 };
+    }
+    if (reduce.matches) { cam = { ...camTo }; camTo = null; }
+    kick();
+  }
+  sky.addEventListener('keydown', e => { if (e.key === 'Escape' && open >= 0) toggle(open); });
+  cv.addEventListener('click', e => {
+    const b = cv.getBoundingClientRect(), mx = e.clientX - b.left, my = e.clientY - b.top;
+    let best = -1, bd = 1e9;
+    world.pts.forEach((p, i) => { const [x, y] = toScreen(...p), d = Math.hypot(x - mx, y - my); if (d < bd) { bd = d; best = i; } });
+    if (bd < 70 * Math.max(cam.z, .6)) toggle(best); else if (open >= 0) toggle(open);
+  });
+
   const MINP = 10, MAXP = 5000;
   const sliderToP = v => Math.round(MINP * Math.pow(MAXP / MINP, v / 1000));
   const pToSlider = p => Math.round(1000 * Math.log(p / MINP) / Math.log(MAXP / MINP));
-  const heat = share => share >= .3 ? 'hot' : share >= .1 ? 'warm' : 'cool';
-  const heatColor = h => h === 'hot' ? 'var(--hot)' : h === 'warm' ? 'var(--warm)' : 'var(--cool)';
-  const x2text = x => x < 1.15 ? '×1' : '×' + (x < 9.5 ? x.toFixed(1).replace(/\.0$/, '') : Math.round(x));
-  const pct = s => s < .01 ? '<1%' : Math.round(s * 100) + '%';
+  $('people').addEventListener('input', e => { P = sliderToP(+e.target.value); render(); });
+  document.querySelectorAll('[data-y]').forEach(b => b.addEventListener('click', () => { YEARS = +b.dataset.y; render(); }));
 
-  function compute(p) {
-    const rows = STEPS.map(s => { const now = s.cost(p), dbl = s.cost(p * 2); return { s, ...now, x2: dbl.ms / Math.max(now.ms, 1e-9), added: dbl.ms - now.ms }; });
-    const total = rows.reduce((a, r) => a + r.ms, 0);
-    rows.forEach(r => r.share = r.ms / total);
-    const top = rows.reduce((a, r) => r.ms > a.ms ? r : a, rows[0]);
-    // The step that adds the most time when the team doubles.
-    const grower = rows.reduce((a, r) => r.added > a.added ? r : a, rows[0]);
-    return { rows, total, top, grower };
-  }
-  // Where the fastest-growing step overtakes today's slowest one, for the answer sentence.
-  function crossover() {
-    const g = STEPS.indexOf(model.grower.s), t = STEPS.indexOf(model.top.s);
-    for (let p = MINP; p <= 200000; p = Math.ceil(p * 1.02)) if (STEPS[g].cost(p).ms >= STEPS[t].cost(p).ms) return p;
-    return null;
-  }
+  new IntersectionObserver(es => { visible = es[0].isIntersecting; kick(); }).observe(sky);
+  document.addEventListener('visibilitychange', () => { visible = !document.hidden; kick(); });
+  let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { fit(); render(); }, 120); });
+  narrow.addEventListener('change', () => { open = -1; $('card').classList.remove('open'); dots = []; fit(); render(); });
+  reduce.addEventListener('change', () => { render(); });
 
-  const WIDE = { w: 1240, h: 460, pts: [[70,310],[188,180],[308,320],[430,180],[556,320],[684,180],[810,320],[934,180],[1056,320],[1170,180]] };
-  const TALL = { w: 400, h: 1180, pts: [[70,70],[120,185],[70,300],[125,415],[70,530],[120,645],[70,760],[125,875],[70,990],[120,1105]] };
-
-  function el(tag, attrs, text) { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (text != null) e.textContent = text; return e; }
-  function bgStars() {
-    let seed = 11; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
-    const g = el('g', { 'aria-hidden': 'true' });
-    for (let i = 0, n = Math.round(L.w * L.h / 5200); i < n; i++)
-      g.appendChild(el('circle', { cx: (rnd() * L.w).toFixed(1), cy: (rnd() * L.h).toFixed(1), r: rnd() < .08 ? 1.1 : (.55 + rnd() * .35).toFixed(2), fill: '#ecebe6', 'fill-opacity': (.12 + rnd() * .4).toFixed(2) }));
-    return g;
-  }
-
-  function build() {
-    L = narrow.matches ? TALL : WIDE;
-    svg.replaceChildren();
-    svg.setAttribute('viewBox', `0 0 ${L.w} ${L.h}`);
-    const defs = el('defs', {});
-    for (const [k, c] of [['cool', '#cfe0ff'], ['warm', '#ffc56b'], ['hot', '#ff6b3d']]) {
-      const gr = el('radialGradient', { id: 'au-' + k });
-      gr.append(el('stop', { offset: '0', 'stop-color': c, 'stop-opacity': '.55' }), el('stop', { offset: '.35', 'stop-color': c, 'stop-opacity': '.2' }), el('stop', { offset: '1', 'stop-color': c, 'stop-opacity': '0' }));
-      defs.appendChild(gr);
-    }
-    const auras = el('g', { 'aria-hidden': 'true' }), segs = el('g', { 'aria-hidden': 'true' }), stars = el('g', {});
-    svg.append(defs, bgStars(), auras, segs, stars);
-    nodes.length = 0;
-    L.pts.forEach(([x, y], i) => {
-      let seg = null;
-      if (i) { const [px, py] = L.pts[i - 1]; seg = el('line', { class: 'seg', x1: px, y1: py, x2: x, y2: y }); segs.appendChild(seg); }
-      const aura = el('circle', { class: 'aura', cx: x, cy: y, r: 100, fill: 'url(#au-cool)' });
-      auras.appendChild(aura);
-      const g = el('g', { class: 'star', tabindex: '0', role: 'button' });
-      g.append(el('circle', { class: 'hit', cx: x, cy: y, r: 34 }), el('circle', { class: 'ring', cx: x, cy: y, r: 13 }), el('circle', { cx: x, cy: y, r: 3.6, fill: '#ffffff' }));
-      const tall = L === TALL, below = !tall && y > 250;
-      const tx = tall ? x + 34 : x, ty = tall ? y - 8 : below ? y + 40 : y - 66, anchor = tall ? 'start' : 'middle';
-      const ms = el('text', { class: 't-ms', x: tx, y: ty + 36, 'text-anchor': anchor }, '');
-      g.append(el('text', { class: 't-name', x: tx, y: ty, 'text-anchor': anchor }, STEPS[i].name), el('text', { class: 't-o', x: tx, y: ty + 18, 'text-anchor': anchor }, STEPS[i].o), ms);
-      g.addEventListener('click', () => choose(i));
-      g.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); choose(i); } });
-      stars.appendChild(g);
-      nodes.push({ g, aura, ms, seg, x, y });
-    });
-    pulse = el('g', { 'aria-hidden': 'true', opacity: '0' });
-    pulse.append(el('circle', { r: 9, fill: 'url(#au-warm)' }), el('circle', { r: 2.6, fill: '#ffffff' }));
-    svg.appendChild(pulse);
-    render();
-  }
-
-  function render() {
-    model = compute(P);
-    const maxR = L === TALL ? 92 : 118;
-    model.rows.forEach((r, i) => {
-      const n = nodes[i], h = heat(r.share);
-      n.aura.setAttribute('fill', `url(#au-${h})`);
-      n.aura.style.transform = `scale(${((10 + maxR * Math.sqrt(r.share)) / 100).toFixed(3)})`;
-      n.ms.textContent = `${fmtMs(r.ms)} · ${pct(r.share)}`;
-      n.ms.style.fill = h === 'cool' ? 'var(--ink)' : heatColor(h);
-      n.g.setAttribute('aria-label', `${r.s.name}: ${r.s.o}, about ${fmtMs(r.ms)}, ${pct(r.share)} of the run`);
-    });
-    if (!pinned || sel == null) sel = model.rows.indexOf(model.top);
-    $('#peopleOut').textContent = P.toLocaleString('en-US');
-    $('#total').textContent = fmtMs(model.total);
-    if (!play) $('#elapsed').textContent = '0 ms';
-    document.querySelectorAll('[data-p]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.p === P)));
-    document.querySelectorAll('[data-y]').forEach(b => b.setAttribute('aria-pressed', String(+b.dataset.y === YEARS)));
-    const t = model.top, g = model.grower, cls = r => heat(r.share) === 'hot' ? 'hotname' : 'warmname';
-    const who = `With ${P.toLocaleString('en-US')} people and ${fmtN(tasksFor(P))} tasks, one meeting takes about <b>${fmtMs(model.total)}</b> to process.`;
-    if (t === g) {
-      $('#answer').innerHTML = `${who} The bottleneck is <b class="${cls(t)}">${t.s.name}</b> at ${pct(t.share)}. It checks every action line against every task, so its time goes ${x2text(t.x2)} each time the team doubles and keeps growing as the archive does.`;
-    } else {
-      const at = crossover();
-      $('#answer').innerHTML = `${who} The slowest step is <b class="${cls(t)}">${t.s.name}</b> at ${pct(t.share)}, a fixed cost that does not grow with the team. The step to watch is <b class="warmname">${g.s.name}</b>: its time goes ${x2text(g.x2)} each time the team doubles${at ? ` and overtakes it at about ${at.toLocaleString('en-US')} people` : ''}.`;
-    }
-    card(); table();
-  }
-
-  function choose(i) { sel = i; pinned = true; card(); table(); }
-
-  function card() {
-    const r = model.rows[sel], s = r.s;
-    nodes.forEach((n, k) => n.g.classList.toggle('sel', k === sel));
-    $('#card').innerHTML = `
-      <div class="kicker">Step ${sel + 1} of ${STEPS.length}${r === model.top ? ' · bottleneck' : ''}${r === model.grower && r !== model.top ? ' · grows fastest' : ''}</div>
-      <h2>${s.name}</h2>
-      <p class="what">${s.what}</p>
-      <dl class="facts">
-        <dt>Code</dt><dd><code>${s.code}</code></dd>
-        <dt>Complexity</dt><dd><span class="big">${s.o}</span><span class="tag src">from source</span><br><span class="sub">Grows with ${s.grows.toLowerCase()}. L is action lines, T is tasks, A is rows to add.</span></dd>
-        <dt>Team ×2</dt><dd><span class="big">${x2text(r.x2)}</span> time</dd>
-        <dt>At ${P.toLocaleString('en-US')}</dt><dd><span class="big">${fmtMs(r.ms)}</span><span class="tag est">estimate</span><br><span class="sub">${r.work}</span></dd>
-      </dl>
-      ${s.note ? `<p class="note">${s.note}</p>` : ''}
-      ${s.fix ? `<p class="note fix">${s.fix}</p>` : ''}`;
-  }
-
-  function table() {
-    $('#tbl tbody').innerHTML = model.rows.map((r, i) => `<tr tabindex="0" data-i="${i}" class="${i === sel ? 'sel' : ''}">
-        <td>${r.s.name}<br><code>${r.s.code}</code></td>
-        <td><span class="o">${r.s.o}</span><br><span class="gw">${r.s.grows}</span></td>
-        <td class="num">${x2text(r.x2)}</td>
-        <td class="num">${fmtMs(r.ms)}</td>
-        <td class="num"><span class="bar" style="width:${Math.max(2, Math.round(r.share * 70))}px;background:${heatColor(heat(r.share))}"></span>${pct(r.share)}</td></tr>`).join('');
-  }
-  const tb = $('#tbl tbody');
-  tb.addEventListener('click', e => { const tr = e.target.closest('tr'); if (tr) choose(+tr.dataset.i); });
-  tb.addEventListener('keydown', e => { const tr = e.target.closest('tr'); if (tr && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); choose(+tr.dataset.i); } });
-
-  function setP(p, fromSlider) {
-    P = Math.max(MINP, Math.min(MAXP, p)); pinned = false;
-    if (!fromSlider) $('#people').value = pToSlider(P);
-    stopPlay(); render();
-  }
-  $('#people').addEventListener('input', e => setP(sliderToP(+e.target.value), true));
-  document.querySelectorAll('[data-p]').forEach(b => b.addEventListener('click', () => setP(+b.dataset.p)));
-  document.querySelectorAll('[data-y]').forEach(b => b.addEventListener('click', () => { YEARS = +b.dataset.y; pinned = false; stopPlay(); render(); }));
-
-  // Follow the flow: a light travels star to star and waits at each one in proportion to its share of the time.
-  const ease = t => t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
-  function stopPlay() {
-    if (!play) return; cancelAnimationFrame(play.raf); play = null;
-    pulse.setAttribute('opacity', '0'); nodes.forEach(n => n.seg && n.seg.classList.remove('lit'));
-    $('#play').textContent = 'Follow the flow';
-  }
-  function startPlay() {
-    if (reduce.matches) { $('#elapsed').textContent = fmtMs(model.total); return; }
-    const plan = []; let t = 0, before = 0;
-    model.rows.forEach((r, i) => {
-      if (i) { plan.push({ move: true, i, t0: t, t1: t + 420, before }); t += 420; }
-      const d = 260 + 2600 * r.share; plan.push({ move: false, i, t0: t, t1: t + d, before, ms: r.ms }); t += d; before += r.ms;
-    });
-    play = { plan, end: t, start: performance.now(), raf: 0, at: -1 };
-    nodes.forEach(n => n.seg && n.seg.classList.remove('lit'));
-    pulse.setAttribute('opacity', '1');
-    $('#play').textContent = 'Stop';
-    const tick = now => {
-      if (!play) return;
-      const e = now - play.start, step = play.plan.find(p => e < p.t1) || play.plan[play.plan.length - 1];
-      const k = Math.min(1, (e - step.t0) / (step.t1 - step.t0)), n = nodes[step.i];
-      if (step.move) {
-        const a = nodes[step.i - 1], f = ease(k);
-        pulse.setAttribute('transform', `translate(${a.x + (n.x - a.x) * f} ${a.y + (n.y - a.y) * f})`);
-        n.seg.classList.add('lit');
-        $('#elapsed').textContent = fmtMs(step.before);
-      } else {
-        pulse.setAttribute('transform', `translate(${n.x} ${n.y})`);
-        if (play.at !== step.i) { play.at = step.i; sel = step.i; card(); table(); }
-        $('#elapsed').textContent = fmtMs(step.before + step.ms * k);
-      }
-      if (e >= play.end) {
-        $('#elapsed').textContent = fmtMs(model.total); play = null; $('#play').textContent = 'Follow again';
-        setTimeout(() => { if (!play) pulse.setAttribute('opacity', '0'); }, 900); return;
-      }
-      play.raf = requestAnimationFrame(tick);
-    };
-    play.raf = requestAnimationFrame(tick);
-  }
-  $('#play').addEventListener('click', () => { if (play) stopPlay(); else { pinned = true; startPlay(); } });
-  document.addEventListener('visibilitychange', () => { if (document.hidden) stopPlay(); });
-  narrow.addEventListener('change', () => { stopPlay(); build(); });
-
-  $('#people').value = pToSlider(P);
-  build();
+  $('people').value = pToSlider(P);
+  M = model(P);
+  nodes.forEach((n, i) => { n.share = M.rows[i].share; n.heat = Math.min(1, Math.max(0, (n.share - .06) / .3)); });
+  fit(); render();
+  // Start with meetings already on their way, so the first frame shows the flow.
+  if (!reduce.matches) { const now = performance.now(); for (let k = 0; k < 10; k++) { const d = { leg: k % N, t0: now - rnd() * 600, dur: dwell(k % N), stay: true, a: rnd() * 6.283, rr: 30 + rnd() * 14, spin: .6 + rnd() * .8 }; dots.push(d); } }
 })();
 </script>
