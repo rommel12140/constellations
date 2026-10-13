@@ -364,6 +364,8 @@ Implications for v1 on EXO: before/after state is mainly `exo_panel_cache` rows,
 
 ![Conceptual Constellations view of EXO's Team panel Refresh. Code references are real (commit 5362780); recorded values are invented.](Constellations_Interface_Example_EXO.png)
 
+![Conceptual Constellations view of EXO's automatic meeting tasks. Code references are real (commit 5362780); the meeting, people and values are invented, and EXO ships automatic writes switched off.](Constellations_Interface_Example_EXO_Meeting_Tasks.png)
+
 ### Candidate engineering direction
 
 A local-first service and web UI are plausible. A JavaScript/TypeScript starting stack, TypeScript compiler API or ts-morph, React/Vite, React Flow, Monaco, Fastify, pnpm and SQLite/FTS are candidates. The official Anthropic SDK and bounded tool retrieval could support AI integration. OpenTelemetry/W3C conventions could support recording interoperability. Vitest/Playwright could validate the product without making app orchestration a v1 feature.
