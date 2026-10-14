@@ -4,7 +4,7 @@
 
 13 October 2026 • Source-grounded codebase and workflow exploration
 
-**Changes from v1.4.** The MVP interaction is now defined: the workflow is drawn as a constellation of steps, units of work travel from step to step, and each step shows its time complexity and estimated time, with the bottleneck marked (§2, §7). Cost controls are the input dimensions of one unit of work, never a proxy such as headcount (§2, §5). Runtime limits taken from configuration are part of the cost view (§5). The v1 cost output grows from one isolated finding to a per-step cost view of one workflow (§1, §5, §10). The EXO findings add the automatic meeting tasks workflow, its O(L × T) planning cost and the Worker's 30-second CPU limit (§11). No other requirement changed.
+**Changes from v1.4.** The MVP interaction is now defined: the workflow is drawn as a constellation of steps, units of work travel from step to step, and each step shows its time complexity and estimated time, with the bottleneck marked (§2, §7). Cost controls are the input dimensions of one unit of work, never a proxy such as headcount (§2, §5). Runtime limits taken from configuration are part of the cost view (§5). The v1 cost output grows from one isolated finding to a per-step cost view of one workflow (§1, §5, §10). A second example covers background work, where the unit is one cron minute and jobs share budgets (§2, §7). The EXO findings add the automatic meeting tasks workflow, its O(L × T) planning cost, the Worker's 30-second CPU limit and the background jobs' per-minute limits (§11). No other requirement changed.
 
 **Carried from v1.4.** State diagrams are models linked to code and recorded evidence; applications need not use reducers or a state-machine library (§4). The capture point depends on the runtime (§4).
 
@@ -56,6 +56,7 @@ The first screen is the workflow itself, drawn so that one glance answers "where
 - **Crowds show cost.** Slow steps collect a crowd. Each star's ring and halo shift from blue to amber to red as its share of the time grows, and the star with the largest share is tagged as the bottleneck. Colour is never the only cue: the tag, the time and the share are also text.
 - **Controls are input dimensions.** The controls change the input dimensions of one unit of work, such as action lines in a meeting and tasks it is checked against. The view never uses a proxy such as headcount, which would suggest that people, rather than the work each unit carries, are the problem.
 - **Runtime limits.** A limit taken from configuration, such as a CPU limit, is shown against the estimate. Past it, units stop at the step where the limit is reached and never arrive.
+- **Background work uses the same view.** When the work is a scheduler rather than a request, the unit is one tick. The scheduler is drawn at the centre and its jobs around it. Each tick sends a pulse to every job, and each job takes its per-tick slice of the units waiting for it. A job turns red when a full round of its units takes longer than the interval its code asks for. Budgets the jobs share, such as a provider's reads per minute, are shown as gauges.
 - **A star opens.** Selecting a star shows what it holds, its complexity and what it grows with, how its time changes when a dimension doubles, its time at the chosen size, its source reference, and any possible change, labelled as unverified.
 - **Evidence labels stay visible.** Every number is marked as read from source, measured or assumed (§3). The simulation is a cost model driven by those numbers; it does not execute the application.
 
@@ -298,6 +299,29 @@ At T = 250,000: Plan each line 22 s, total CPU 32 s > 30 s limit;
 the run stops at Recheck before writing and nothing reaches the Sheet.
 ```
 
+### MVP interaction example: EXO background work
+
+[Open the interactive example](exo-background-tick.html). The cron, the jobs, their per-minute limits, re-run intervals, gates and the shared limit of 40 Sheets reads per minute come from EXO's source at commit 5362780. Sheets reads per unit and some unit counts are assumptions. No EXO code was run.
+
+![One minute of EXO's background work with 200 reporting Sheets, 40 saved panel copies, 6 Owner scopes and 400 reminders due together: six of ten running jobs fall behind, including reminders that miss their 15-minute window.](Constellations_MVP_Background_EXO.png)
+
+```text
+CONSTELLATIONS / EXO background work / one cron minute
+Controls: reporting Sheets, saved panel copies, Owner scopes, reminders due at once
+
+JOB                  PER MINUTE   WANTS EACH UNIT      AT THE BUSY SETTING
+Reports reader       24 Sheets    every 3 min          200 Sheets: every 9.4 min   BEHIND
+Panel refresh        1 copy       every minute         40 copies: every 40 min     BEHIND
+Scheduled reminders  10           within 15 min        400 due: 267 skipped        MISSED
+Fact snapshots       1 watch      every 15 min         30 watches: every 34 min    BEHIND
+Calendar answers     1 Owner      every 5 min          6 Owners: every 6 min       BEHIND
+Email answers        1 Owner      every 5 min          6 Owners: every 6 min       BEHIND
+Meeting automation   1 meeting    (no interval)        2 meetings: every 2.3 min
+Scorecards, hub files, Promise Sheet: keep up. Task export, collection: off by default.
+
+Shared: Google Sheets reads 45 of 40 this minute -> Sheets jobs wait and run at 89%.
+```
+
 <!-- pagebreak -->
 
 ## 8. Full product vision beyond v1
@@ -410,6 +434,8 @@ Read-only inspection of profitsx/exo at commit 5362780 on 13 October 2026. Nothi
 | Meeting automation | A per-minute cron (`wrangler.jsonc:127`) takes one meeting per tick (`src/meetings/automation-runner.ts:141`): wait until the notes have gone 15 minutes without an edit, read them, classify action lines with Sonnet, load every open and archived task, plan each line, then recheck and write the new rows in one verified batch (`src/meetings/automation-writer.ts:117`, `:181`). |
 | Meeting automation cost | For each action line, planning hashes the source identity of every meeting-made task (`src/meetings/automation-plan.ts:55`) and rebuilds and compares every task's wording (`:78`, `:80`): O(L × T), where T includes the archive and grows with every meeting processed. The writer repeats the comparison for each row it adds: O(A × T). Both per-task values could be computed once per meeting. |
 | Runtime limit | The Worker's CPU limit is 30 seconds (`wrangler.jsonc:135`). Under the illustration's assumptions, one meeting's matching work reaches it at about 238,000 tasks. |
+| Background jobs | The per-minute cron starts about 14 jobs side by side (`src/worker.ts:145`), each with a 15-minute lease unless it runs every tick (`src/google-access.ts:335`). Most advance one unit per minute: one panel copy (`src/dashboard/panels.ts:437`), one fact watch (`src/changes/scheduled.ts:33`), one Owner's calendar or email answers, one scorecard. The reports reader takes up to 24 Sheets (`src/reporting/background-reader.ts:87`); reminders send 10 (`src/scheduled-messages/runner.ts:209`). |
+| Background limits | A saved panel copy asks to run again after 60 seconds (`src/dashboard/panel-cache.ts:118`) but each copy waits its turn behind every other copy kept in the last 7 days. Reminders expire 15 minutes after they are due (`src/scheduled-messages/model.ts:6`), so more than 150 due together cannot all be sent. All jobs share 40 Sheets reads per minute per Google account (`src/google-access.ts:354`); a job over the limit waits for the next minute. |
 | External services | Google (Drive, Sheets, Calendar, Gmail), Anthropic API, HighLevel, OAuth. |
 | Secrets and config | No committed secrets found; `.env` and `.dev.vars` are ignored; Cloudflare config uses placeholder IDs. |
 
@@ -417,7 +443,7 @@ Implications for v1 on EXO: before/after state is mainly `exo_panel_cache` rows,
 
 ![Conceptual Constellations view of EXO's Team panel Refresh. Code references are real (commit 5362780); recorded values are invented.](Constellations_Interface_Example_EXO.png)
 
-The MVP cost view of EXO's automatic meeting tasks is in §7 ([interactive](exo-meeting-flow.html)). EXO ships automatic writes switched off; the example imagines them on.
+The MVP cost views of EXO's automatic meeting tasks ([interactive](exo-meeting-flow.html)) and background work ([interactive](exo-background-tick.html)) are in §7. EXO ships automatic writes switched off; the example imagines them on.
 
 ### Candidate engineering direction
 

@@ -1,0 +1,501 @@
+<title>EXO Background Minute</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&display=swap">
+<style>
+/* Layout: the sky is the page. The cron sits at the centre like a sun and its jobs circle it. Title and the shared budget float at the top, the work sizes at the bottom. Single dark look by choice. */
+:root {
+  color-scheme: dark;
+  --sky: #000000;
+  --ink: #f1efe9;
+  --dim: #a3a5ae;
+  --faint: #62656f;
+  --cool: #cfe0ff;
+  --warm: #ffc56b;
+  --hot: #ff6136;
+  --glass: rgba(8, 9, 14, .84);
+  --rule: rgba(241, 239, 233, .14);
+  --f-display: "Instrument Serif", "Iowan Old Style", Georgia, serif;
+  --f-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --ease-settle: cubic-bezier(.2, .8, .2, 1);
+}
+html, body { background: var(--sky); }
+body { color: var(--ink); font: 15px/1.5 var(--f-body); padding-inline: 0; padding-block: 0; }
+
+.sky { position: relative; height: clamp(700px, 100svh, 980px); overflow: hidden; background: var(--sky); }
+.stage { position: absolute; inset: 0; }
+canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: pointer; }
+.labels { position: absolute; inset: 0; pointer-events: none; }
+
+.top { position: absolute; top: 0; left: 0; right: 0; padding: 22px 28px 0; display: flex; justify-content: space-between; gap: 24px; pointer-events: none; z-index: 2; }
+.title { display: grid; gap: 4px; max-width: 64ch; }
+.kicker { font: 500 11px/1.4 var(--f-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+h1 { font: 400 clamp(28px, 3.4vw, 44px)/1.05 var(--f-display); margin: 0; }
+h1 em { color: var(--warm); }
+.say { margin: 4px 0 0; font-size: clamp(14px, 1.3vw, 16px); text-wrap: pretty; min-height: 3em; }
+.say b { font-weight: 600; }
+.say .hot { color: var(--hot); } .say .warm { color: var(--warm); }
+
+.meter { display: grid; gap: 8px; justify-items: end; text-align: right; flex: none; }
+.meter .cap { font: 500 11px/1.3 var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--dim); }
+.meter .big { font: 500 clamp(26px, 3vw, 38px)/1 var(--f-mono); font-variant-numeric: tabular-nums; }
+.meter .big small { font-size: .5em; color: var(--dim); }
+.bar { width: 230px; height: 6px; border-radius: 3px; background: rgba(241, 239, 233, .12); overflow: hidden; position: relative; }
+.bar i { position: absolute; inset: 0 auto 0 0; width: 0; background: var(--cool); border-radius: 3px; transition: width 300ms var(--ease-settle), background 300ms; }
+.meter.over .bar i { background: var(--hot); }
+.meter.over .big { color: var(--hot); }
+.meter .note { font-size: 12.5px; color: var(--dim); max-width: 32ch; }
+.legend { color: var(--dim); font-size: 12.5px; display: flex; align-items: center; gap: 8px; }
+.legend i { width: 7px; height: 7px; border-radius: 50%; background: var(--ink); display: inline-block; }
+
+.bottom { position: absolute; left: 0; right: 0; bottom: 0; padding: 0 28px 20px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; z-index: 2; }
+.ctl { display: grid; gap: 6px; padding: 10px 14px; border: 1px solid var(--rule); border-radius: 14px; background: var(--glass); min-width: 0; }
+.ctl .row { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.ctl label { font: 500 10.5px/1.2 var(--f-mono); letter-spacing: .09em; text-transform: uppercase; color: var(--dim); }
+.ctl output { font: 500 20px/1 var(--f-mono); font-variant-numeric: tabular-nums; }
+.ctl .hint { font-size: 12px; color: var(--faint); }
+input[type=range] { width: 100%; accent-color: var(--warm); height: 22px; margin: 0; }
+button { font: 500 13px/1 var(--f-body); color: var(--ink); background: transparent; border: 1px solid var(--rule); border-radius: 999px; padding: 9px 13px; cursor: pointer; }
+button:hover { border-color: var(--dim); }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--warm); outline-offset: 2px; }
+
+.lbl { position: absolute; left: 0; top: 0; pointer-events: auto; background: none; border: 0; border-radius: 8px; padding: 3px 7px; color: var(--ink); display: grid; gap: 1px; white-space: nowrap; will-change: transform; text-align: left; }
+.lbl:hover { border: 0; background: rgba(241, 239, 233, .06); }
+.lbl.c { text-align: center; } .lbl.r { text-align: right; }
+.lbl .n { font: 500 14px/1.2 var(--f-body); text-shadow: 0 0 6px #000, 0 0 2px #000; }
+.lbl .o { font: 500 11.5px/1.25 var(--f-mono); color: var(--dim); text-shadow: 0 0 6px #000; }
+.lbl .t { font: 500 12.5px/1.25 var(--f-mono); font-variant-numeric: tabular-nums; text-shadow: 0 0 6px #000; transition: color 400ms; }
+.lbl .tag { justify-self: start; font: 500 10px/1 var(--f-mono); letter-spacing: .1em; text-transform: uppercase; padding: 4px 7px; border-radius: 4px; margin-top: 3px; background: var(--hot); color: #000; }
+.lbl.c .tag { justify-self: center; } .lbl.r .tag { justify-self: end; }
+.lbl.off { opacity: .45; }
+.lbl.dim { opacity: .3; }
+.sun { position: absolute; left: 0; top: 0; text-align: center; pointer-events: none; display: grid; gap: 2px; }
+.sun .n { font: 500 13px/1.2 var(--f-mono); letter-spacing: .1em; text-transform: uppercase; text-shadow: 0 0 8px #000; }
+.sun .o { font: 500 11.5px/1.2 var(--f-mono); color: var(--dim); text-shadow: 0 0 6px #000; }
+
+.card { position: absolute; top: 50%; right: 28px; width: min(390px, calc(100% - 56px)); transform: translate(24px, -50%); opacity: 0; pointer-events: none; transition: transform 380ms var(--ease-settle), opacity 280ms var(--ease-settle); background: var(--glass); border: 1px solid var(--rule); border-radius: 16px; padding: 20px 22px; display: grid; gap: 12px; z-index: 4; max-height: calc(100% - 40px); overflow: auto; }
+.card.open { transform: translate(0, -50%); opacity: 1; pointer-events: auto; }
+.card h2 { font: 400 30px/1.05 var(--f-display); margin: 0; }
+.card p { margin: 0; }
+.card dl { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 8px 14px; margin: 0; }
+.card dt { font: 500 10.5px/1.7 var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
+.card dd { margin: 0; font-variant-numeric: tabular-nums; }
+.card .big { font: 500 19px var(--f-mono); }
+.card .sub { color: var(--dim); }
+.card code { font: 12px var(--f-mono); color: var(--cool); overflow-wrap: anywhere; }
+.card .find { border-left: 2px solid var(--warm); padding: 8px 10px; font-size: 14px; background: rgba(255, 197, 107, .06); }
+.card .head { display: flex; justify-content: space-between; align-items: center; }
+
+.foot { max-width: 1100px; margin: 0 auto; padding-inline: 28px; padding-block: 18px 40px; color: var(--dim); font-size: 13.5px; }
+.foot summary { cursor: pointer; color: var(--ink); }
+.foot p { margin: 8px 0 0; max-width: 95ch; }
+.foot code { font: 12px var(--f-mono); color: var(--cool); }
+
+@media (max-width: 1100px) { .bottom { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 700px) {
+  .sky { height: auto; overflow: visible; }
+  .top { position: static; flex-direction: column; padding: 20px 16px 8px; gap: 12px; }
+  .meter { justify-items: start; text-align: left; }
+  .stage { position: relative; inset: auto; }
+  .bottom { position: sticky; bottom: 0; padding: 10px 16px 12px; background: linear-gradient(to top, #000 78%, rgba(0, 0, 0, 0)); gap: 8px; }
+  .ctl { padding: 8px 10px; }
+  .ctl .hint { display: none; }
+  .card { position: fixed; top: auto; bottom: 12px; left: 12px; right: 12px; width: auto; transform: translate(0, 24px); max-height: 70svh; }
+  .card.open { transform: none; }
+  .foot { padding-inline: 16px; }
+}
+@media (prefers-reduced-motion: reduce) { .card, .bar i, .lbl .t { transition: none; } }
+</style>
+
+<section class="sky" id="sky" aria-label="One minute of EXO background work. The cron starts every job each minute; each job takes a small slice of its work.">
+  <div class="top">
+    <div class="title">
+      <div class="kicker">EXO · background work · real code at 5362780</div>
+      <h1>One minute of <em>background work</em></h1>
+      <p class="say" id="say" aria-live="polite"></p>
+    </div>
+    <div class="meter" id="meter">
+      <div class="cap">Google Sheets reads this minute</div>
+      <div class="big" id="reads">0 <small>/ 40</small></div>
+      <div class="bar"><i id="readsBar"></i></div>
+      <div class="note" id="readsNote">Shared by every job on the one connected Google account.</div>
+      <div class="legend"><i></i> each dot is one unit of work · one minute ≈ 3 s</div>
+    </div>
+  </div>
+  <div class="stage" id="stage">
+    <canvas id="cv" aria-hidden="true"></canvas>
+    <div class="labels" id="labels"></div>
+  </div>
+  <div class="bottom">
+    <div class="ctl"><div class="row"><label for="sheets">Reporting Sheets</label><output id="sheetsOut">20</output></div>
+      <input type="range" id="sheets" min="0" max="1000" value="0"><span class="hint">Read by the reports reader</span></div>
+    <div class="ctl"><div class="row"><label for="copies">Saved panel copies</label><output id="copiesOut">6</output></div>
+      <input type="range" id="copies" min="0" max="1000" value="0"><span class="hint">One per viewer, panel and period, kept 7 days</span></div>
+    <div class="ctl"><div class="row"><label for="owners">Owner scopes</label><output id="ownersOut">2</output></div>
+      <input type="range" id="owners" min="1" max="20" value="2"><span class="hint">Calendar, email and fact watches per Owner</span></div>
+    <div class="ctl"><div class="row"><label for="reminders">Reminders due at once</label><output id="remindersOut">5</output></div>
+      <input type="range" id="reminders" min="0" max="1000" value="0"><span class="hint">Scheduled emails due in the same minute</span></div>
+  </div>
+  <aside class="card" id="card" aria-live="polite"></aside>
+</section>
+
+<div class="foot">
+  <details>
+    <summary>What is real, measured and assumed</summary>
+    <p><b>Real:</b> the jobs, the cron every minute (<code>src/worker.ts:145</code>), jobs running side by side with a 15-minute lease each (<code>src/google-access.ts:335</code>), each job's per-minute limit, its re-run interval and the shared limit of 40 Sheets reads per minute per Google account (<code>src/google-access.ts:354</code>) come from EXO's source at commit 5362780. No EXO code was run.</p>
+    <p><b>Assumed:</b> Sheets reads per unit (1 per reporting Sheet, 1 per reminder, 3 per fact watch, 3 per meeting, about 1 for the Promise Sheet, scorecards and hub files); 2 meetings waiting, 4 saved scorecards and 40 linked hub files; a saved panel copy that has not changed needs one step. Reminders here are all due in the same minute, every 20 minutes.</p>
+    <p><b>Simplified:</b> a job that needs more Sheets reads than are left this minute waits for the next one (<code>SheetsReadDeferred</code>); here every Sheets job slows by the same share. Open dashboard tabs also advance their own panel copies, which this view leaves out. CPU is not shown: these jobs mostly wait on Google, Gmail and D1.</p>
+  </details>
+</div>
+
+<script>
+(() => {
+  // ---------- Model: each job takes a slice of its units every minute ----------
+  const READ_LIMIT = 40, WINDOW = 15, MEETINGS = 2, SCORECARDS = 4, HUB_FILES = 40;
+  const S = { sheets: 20, copies: 6, owners: 2, reminders: 5 };
+  const JOBS = [
+    { key: 'reports', name: 'Reports reader', unit: ['Sheet', 'Sheets'], per: 24, target: 3, reads: 1, n: s => s.sheets,
+      what: 'Reads every approved daily and weekly reporting Sheet into saved status copies.',
+      code: 'src/reporting/background-reader.ts:87', why: 'A copy not checked within 3 minutes makes the person asking wait for a live read instead.',
+      find: 'Up to 24 Sheets a minute, stopping once 42 Google operations are used (:90). More Sheets than 72 cannot all be checked within 3 minutes.' },
+    { key: 'panels', name: 'Panel refresh', unit: ['copy', 'copies'], per: 1, target: 1, reads: 0, n: s => s.copies,
+      what: 'Rebuilds saved Overview panels (Team, Tasks, EOD, Meetings) so viewers open a ready copy.',
+      code: 'src/dashboard/panels.ts:437', why: 'A finished copy asks to run again 60 seconds later (panel-cache.ts:118).',
+      find: 'Only one copy moves forward each minute (LIMIT 1). With N copies, each gets a turn every N minutes. Copies stay in the queue for 7 days after a viewer opens them.' },
+    { key: 'reminders', name: 'Scheduled reminders', unit: ['reminder', 'reminders'], per: 10, target: WINDOW, reads: 1, n: s => s.reminders, window: true,
+      what: 'Sends Owner-approved reminder emails, such as a missing end-of-day report.',
+      code: 'src/scheduled-messages/runner.ts:209', why: 'Each reminder must go out within 15 minutes of its due time (model.ts:6).',
+      find: 'Ten reminders a minute. Anything still unsent after 15 minutes is skipped as window missed, so more than 150 reminders due together cannot all be sent.' },
+    { key: 'meetings', name: 'Meeting automation', unit: ['meeting', 'meetings'], per: 1, target: null, reads: 3, n: s => MEETINGS,
+      what: 'Turns a finished meeting\'s action lines into rows on the task Sheet.',
+      code: 'src/meetings/automation-runner.ts:141', why: 'Notes wait 15 minutes after their last edit; then one meeting per minute.',
+      find: 'One meeting per minute. Its own cost grows with action lines × tasks; see the meeting flow view.' },
+    { key: 'facts', name: 'Fact snapshots', unit: ['watch', 'watches'], per: 1, target: 15, reads: 3, n: s => 5 * s.owners,
+      what: 'Takes compact snapshots of tasks, reports and connections for change answers.',
+      code: 'src/changes/scheduled.ts:33', why: 'Each watch runs again 15 minutes later (:53).',
+      find: 'Five watches per Owner and one per minute, so more than 3 Owners cannot all be refreshed every 15 minutes.' },
+    { key: 'calendar', name: 'Calendar answers', unit: ['Owner', 'Owners'], per: 1, target: 5, reads: 0, n: s => s.owners,
+      what: 'Refreshes each Owner\'s standing "today" and "this week" calendar answers.',
+      code: 'src/calendar-answers/service.ts:252', why: 'Each Owner is due again after 5 minutes (FRESH_MS).',
+      find: 'One Owner per minute: more than 5 Owners cannot all stay within 5 minutes. Uses the Calendar API, not Sheets.' },
+    { key: 'email', name: 'Email answers', unit: ['Owner', 'Owners'], per: 1, target: 5, reads: 0, n: s => s.owners,
+      what: 'Refreshes each Owner\'s standing "needs a reply" inbox page.',
+      code: 'src/email-answers/service.ts:141', why: 'Each Owner is due again after 5 minutes.',
+      find: 'One Owner per minute, about 10 Gmail reads each. More than 5 Owners fall behind.' },
+    { key: 'scorecards', name: 'Scorecards', unit: ['scorecard', 'scorecards'], per: 1, target: 5, reads: 1, n: s => SCORECARDS,
+      what: 'Refreshes one saved scorecard from its selected Sheet.',
+      code: 'src/metrics/saved.ts:70', why: 'Each scorecard is due again after 5 minutes (REFRESH_MS).',
+      find: 'One scorecard per minute. Unchanged Sheets cost one Drive check; changed ones three Sheets reads.' },
+    { key: 'hub', name: 'Company hub files', unit: ['file', 'files'], per: 30, target: 5, reads: .1, n: s => HUB_FILES,
+      what: 'Re-checks the Docs and Sheets linked from the company hub and re-reads changed ones.',
+      code: 'src/company-hub/files.ts:166', why: 'The reader runs again after 5 minutes, or 1 minute while work remains.',
+      find: 'Up to 30 files a minute, at most 150 linked files, stopping at 50 Google operations.' },
+    { key: 'promise', name: 'Promise Sheet', unit: ['workbook', 'workbooks'], per: 1, target: 1, reads: 1, n: s => 1,
+      what: 'Refreshes the saved copy of the shared Promise task Sheet.',
+      code: 'src/current-tasks/promise-observation.ts:82', why: 'Due again 60 seconds after a save.',
+      find: 'One workbook. One Drive check when unchanged; three Sheets reads when it changed.' },
+    { key: 'export', name: 'Task Sheet export', off: true, unit: ['export', 'exports'], per: 1, target: null, reads: 0, n: s => 0,
+      what: 'Writes the task database out to a Sheet, one step per minute.',
+      code: 'src/task-master/export-runner.ts:218', why: 'Off unless EXO_TASK_SHEET_EXPORT_ENABLED is true (:219).', find: 'Off by default.' },
+    { key: 'collection', name: 'Source collection', off: true, unit: ['source', 'sources'], per: 1, target: 60, reads: 0, n: s => 0,
+      what: 'Collects one selected source per step, re-queued after an hour.',
+      code: 'src/dashboard/ingestion.ts:226', why: 'Off unless collection, Google connect and production-ready flags are all on (:227).', find: 'Off by default.' },
+  ];
+  const N = JOBS.length;
+
+  let M;
+  function model() {
+    const rows = JOBS.map(j => ({ j, n: j.off ? 0 : j.n(S) }));
+    rows.forEach(r => { r.reads = r.j.off ? 0 : Math.min(r.n, r.j.per) * r.j.reads; });
+    const demand = rows.reduce((a, r) => a + r.reads, 0), share = Math.min(1, READ_LIMIT / Math.max(demand, 1e-9));
+    rows.forEach(r => {
+      const j = r.j;
+      r.rate = j.per * (r.reads > 0 ? share : 1);
+      r.round = r.n === 0 ? 0 : Math.max(1, r.n / r.rate);
+      if (j.window) { r.sent = Math.min(r.n, Math.floor(r.rate * WINDOW)); r.skipped = r.n - r.sent; r.ratio = r.skipped > 0 ? 1.2 + Math.min(1, r.skipped / Math.max(r.n, 1)) : r.round / WINDOW; }
+      else r.ratio = j.target ? r.round / j.target : (j.off ? 0 : .25);
+      r.behind = !j.off && (j.window ? r.skipped > 0 : !!j.target && r.round > j.target * 1.15);
+    });
+    const used = Math.min(demand, READ_LIMIT);
+    const worst = rows.filter(r => r.behind).sort((a, b) => b.ratio - a.ratio)[0] || null;
+    return { rows, demand, used, share, worst, behind: rows.filter(r => r.behind).length, on: rows.filter(r => !r.j.off).length };
+  }
+  const fmtMin = m => m <= 1 ? 'every minute' : m < 90 ? `every ${m < 10 ? m.toFixed(1).replace(/\.0$/, '') : Math.round(m)} min` : `every ${(m / 60).toFixed(1).replace(/\.0$/, '')} h`;
+  const fmtN = n => Math.round(n).toLocaleString('en-US');
+  const unitOf = (j, n) => j.unit[n === 1 ? 0 : 1];
+
+  // ---------- Scene ----------
+  const $ = id => document.getElementById(id);
+  const cv = $('cv'), ctx = cv.getContext('2d'), labelsEl = $('labels'), sky = $('sky'), stage = $('stage');
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)'), narrow = matchMedia('(max-width: 700px)');
+  const TICK = 3200;
+  let W = 0, H = 0, DPR = 1, wide = true, world, cam = {}, camTo = null, open = -1, bg = null;
+  const COOL = [207, 224, 255], WARM = [255, 197, 107], HOT = [255, 97, 54];
+  const mix = (a, b, t) => a.map((v, k) => v + (b[k] - v) * t);
+  const heatColor = h => h < .5 ? mix(COOL, WARM, h * 2) : mix(WARM, HOT, (h - .5) * 2);
+  const heatOf = r => r.j.off ? 0 : Math.max(0, Math.min(1, (r.ratio - .35) / 1.0));
+
+  // Wide: the cron at the centre, jobs on an ellipse around it. Tall: the cron on top, jobs down one side.
+  function layout() {
+    wide = !narrow.matches;
+    if (wide) {
+      const cx = 700, cy = 370, rx = 500, ry = 240, pts = [];
+      for (let i = 0; i < N; i++) { const a = -Math.PI / 2 + (i + .5) / N * Math.PI * 2; pts.push([cx + Math.cos(a) * rx, cy + Math.sin(a) * ry]); }
+      world = { w: 1400, h: 760, sun: [cx, cy], pts, path: i => [[cx, cy], pts[i]] };
+    } else {
+      const pts = JOBS.map((_, i) => [74, 290 + i * 128]);
+      world = { w: 400, h: 290 + N * 128, sun: [200, 90], pts, path: i => [[200, 90], [200, 200], [26, 200], [26, pts[i][1]], pts[i]] };
+    }
+  }
+  function homeCam() {
+    if (!wide) return { x: world.w / 2, y: world.h / 2, z: W / world.w, ax: W / 2, ay: H / 2 };
+    const top = 170, bot = 120, z = Math.min(W / world.w, (H - top - bot) / world.h);
+    return { x: world.w / 2, y: world.h / 2, z, ax: W / 2, ay: top + (H - top - bot) / 2 };
+  }
+  const toScreen = (x, y) => [(x - cam.x) * cam.z + cam.ax, (y - cam.y) * cam.z + cam.ay];
+  function pathPoint(i, k) {
+    const p = world.path(i); let len = 0; const seg = [];
+    for (let s = 1; s < p.length; s++) { const d = Math.hypot(p[s][0] - p[s - 1][0], p[s][1] - p[s - 1][1]); seg.push(d); len += d; }
+    let t = k * len;
+    for (let s = 0; s < seg.length; s++) { if (t <= seg[s] || s === seg.length - 1) { const f = seg[s] ? Math.min(1, t / seg[s]) : 0; return [p[s][0] + (p[s + 1][0] - p[s][0]) * f, p[s][1] + (p[s + 1][1] - p[s][1]) * f]; } t -= seg[s]; }
+  }
+
+  let seedR = 9; const rnd = () => (seedR = seedR * 16807 % 2147483647) / 2147483647;
+  const nodes = JOBS.map(() => ({ heat: 0, orbit: [], flying: [], pulse: null }));
+
+  function buildLabels() {
+    labelsEl.replaceChildren();
+    const sun = document.createElement('div'); sun.className = 'sun';
+    sun.innerHTML = '<span class="n">Every minute</span><span class="o">cron · src/worker.ts:145</span>';
+    labelsEl.appendChild(sun); world.sunLbl = sun;
+    JOBS.forEach((j, i) => {
+      const b = document.createElement('button'); b.type = 'button';
+      const [x, y] = world.pts[i], cos = (x - world.sun[0]) / 500, sin = (y - world.sun[1]) / 240;
+      const side = !wide ? '' : cos >= 0 ? '' : ' r';
+      // Stars near the top and bottom of the orbit carry their label above or below, clear of their neighbours.
+      nodes[i].vert = wide && Math.abs(sin) > .9 ? (sin < 0 ? 'u' : 'd') : '';
+      b.className = 'lbl' + side + (j.off ? ' off' : '');
+      b.innerHTML = `<span class="n">${j.name}</span><span class="o"></span><span class="t"></span><span class="tag" hidden></span>`;
+      b.addEventListener('click', e => { e.stopPropagation(); toggle(i); });
+      labelsEl.appendChild(b);
+      Object.assign(nodes[i], { lbl: b, o: b.querySelector('.o'), t: b.querySelector('.t'), tag: b.querySelector('.tag'), side: side.trim(), last: '' });
+    });
+  }
+  function fit() {
+    layout();
+    W = Math.round(stage.getBoundingClientRect().width);
+    if (!wide) { H = Math.round(W * world.h / world.w); stage.style.height = H + 'px'; }
+    else { stage.style.height = ''; H = Math.round(sky.getBoundingClientRect().height); }
+    DPR = Math.min(devicePixelRatio || 1, wide ? 2 : 1.5);
+    cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+    buildLabels(); drawBg(); cam = homeCam(); camTo = null;
+    nodes.forEach(n => { n.orbit = []; n.flying = []; });
+  }
+  function drawBg() {
+    bg = document.createElement('canvas'); bg.width = cv.width; bg.height = cv.height;
+    const g = bg.getContext('2d'); let s = 5; const r = () => (s = s * 16807 % 2147483647) / 2147483647;
+    g.fillStyle = '#000'; g.fillRect(0, 0, bg.width, bg.height);
+    for (let i = 0, n = Math.round(W * H / 2600); i < n; i++) { const big = r() < .06; g.fillStyle = `rgba(241,239,233,${(.1 + r() * .42).toFixed(2)})`; const sz = (big ? 1.6 : .9) * DPR; g.fillRect(r() * bg.width, r() * bg.height, sz, sz); }
+  }
+
+  // ---------- Each minute: the cron pulses every job; each job takes its slice ----------
+  const VIS_MAX = 64;
+  let tickAt = 0, minute = 0, remindersLeft = 0, reminderAge = 0;
+  function syncOrbit(i, now) {
+    const r = M.rows[i], n = nodes[i];
+    const want = Math.min(VIS_MAX, r.j.key === 'reminders' ? remindersLeft : r.n);
+    while (n.orbit.length < want) n.orbit.push({ a: rnd() * 6.283, rr: 0, spin: .5 + rnd() * .7, born: now });
+    if (n.orbit.length > want && r.j.key !== 'reminders') n.orbit.length = want;
+    n.orbit.forEach((d, k) => { d.rr = 26 + (k % 5) * 5 + Math.sqrt(k) * 2.4; });
+  }
+  function tick(now) {
+    minute++;
+    if (minute % 20 === 1) { remindersLeft = S.reminders; reminderAge = 0; } else if (remindersLeft > 0) reminderAge++;
+    M.rows.forEach((r, i) => {
+      if (r.j.off) return;
+      const n = nodes[i];
+      n.pulse = { t0: now };
+      // How many units this job moves this minute (fractional rates accumulate).
+      n.acc = (n.acc || 0) + r.rate;
+      let take = Math.floor(n.acc); n.acc -= take;
+      if (r.j.key === 'reminders') {
+        take = Math.min(take, remindersLeft); remindersLeft -= take;
+        if (reminderAge >= WINDOW && remindersLeft > 0) {
+          n.skippedAt = now; const lost = n.orbit.splice(0, n.orbit.length);
+          lost.forEach(d => n.flying.push({ ...d, t0: now, kind: 'skip' })); remindersLeft = 0;
+        }
+      } else take = Math.min(take, r.n);
+      const visTake = Math.min(take, n.orbit.length, 24);
+      for (let k = 0; k < visTake; k++) { const d = r.j.key === 'reminders' ? n.orbit.pop() : n.orbit[(n.cursor = ((n.cursor || 0) + 1) % Math.max(1, n.orbit.length))]; if (d) n.flying.push({ ...d, t0: now + 700, kind: 'in' }); }
+    });
+  }
+
+  function frame(now) {
+    raf = 0;
+    const dt = Math.min(64, lastT ? now - lastT : 16); lastT = now;
+    if (!reduce.matches && now - tickAt >= TICK) { tickAt = now; tick(now); }
+    if (camTo) {
+      const k = 1 - Math.pow(.86, dt / 16);
+      for (const p of ['x', 'y', 'z', 'ax', 'ay']) cam[p] += (camTo[p] - cam[p]) * k;
+      if (Math.abs(cam.z - camTo.z) < .002 && Math.abs(cam.x - camTo.x) < .2) { cam = { ...camTo }; camTo = null; }
+    }
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.drawImage(bg, 0, 0, W, H);
+    const z = cam.z, t = now / 1000;
+    // Spokes.
+    ctx.lineWidth = 1;
+    JOBS.forEach((j, i) => {
+      const p = world.path(i); ctx.strokeStyle = j.off ? 'rgba(241,239,233,.06)' : 'rgba(241,239,233,.15)'; if (j.off) ctx.setLineDash([3, 5]);
+      ctx.beginPath(); p.forEach(([x, y], k) => { const [sx, sy] = toScreen(x, y); k ? ctx.lineTo(sx, sy) : ctx.moveTo(sx, sy); }); ctx.stroke(); ctx.setLineDash([]);
+    });
+    // The sun: the cron.
+    const [sx, sy] = toScreen(...world.sun), beat = reduce.matches ? 0 : Math.max(0, 1 - (now - tickAt) / 900);
+    const sr = (34 + beat * 10) * z, sg = ctx.createRadialGradient(sx, sy, 0, sx, sy, sr);
+    sg.addColorStop(0, `rgba(255,236,200,${.55 + beat * .3})`); sg.addColorStop(.3, 'rgba(255,214,150,.16)'); sg.addColorStop(1, 'rgba(255,214,150,0)');
+    ctx.fillStyle = sg; ctx.beginPath(); ctx.arc(sx, sy, sr, 0, 7); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(sx, sy, 6.5 * z, 0, 7); ctx.fill();
+    // Jobs.
+    M.rows.forEach((r, i) => {
+      const n = nodes[i], [wx, wy] = world.pts[i], [x, y] = toScreen(wx, wy), focus = open < 0 || open === i ? 1 : .3;
+      n.heat += (heatOf(r) - n.heat) * Math.min(1, dt / 400);
+      const rgb = heatColor(n.heat), c = rgb.map(Math.round).join(',');
+      if (!reduce.matches) syncOrbit(i, now);
+      // Pulse travelling out from the cron.
+      if (n.pulse && !reduce.matches) {
+        const k = (now - n.pulse.t0) / 700;
+        if (k < 1) { const [px, py] = toScreen(...pathPoint(i, k)); ctx.fillStyle = 'rgba(255,214,150,.95)'; ctx.beginPath(); ctx.arc(px, py, 2.6 * Math.max(z, .7), 0, 7); ctx.fill(); }
+      }
+      // Quiet halo and state ring.
+      const R = (18 + Math.sqrt(Math.min(r.n, 400)) * 2.2) * z;
+      const halo = ctx.createRadialGradient(x, y, 0, x, y, R);
+      halo.addColorStop(0, `rgba(${c},${(.28 + .25 * n.heat) * focus * (r.j.off ? .4 : 1)})`); halo.addColorStop(.4, `rgba(${c},${(.07 + .07 * n.heat) * focus})`); halo.addColorStop(1, `rgba(${c},0)`);
+      ctx.fillStyle = halo; ctx.beginPath(); ctx.arc(x, y, R, 0, 7); ctx.fill();
+      ctx.strokeStyle = `rgba(${c},${(r.j.off ? .25 : .4 + .55 * n.heat) * focus})`; ctx.lineWidth = 1 + n.heat;
+      if (r.j.off) ctx.setLineDash([2, 4]);
+      ctx.beginPath(); ctx.arc(x, y, 11 * z, 0, 7); ctx.stroke(); ctx.setLineDash([]);
+      // Units waiting their turn orbit the job.
+      ctx.fillStyle = `rgba(255,248,236,${.85 * focus})`;
+      for (const d of n.orbit) { const a = d.a + (reduce.matches ? 0 : t * d.spin * .5), ox = x + Math.cos(a) * d.rr * z, oy = y + Math.sin(a) * d.rr * z * .9; ctx.fillRect(ox - 1.1 * Math.max(z, .7), oy - 1.1 * Math.max(z, .7), 2.2 * Math.max(z, .7), 2.2 * Math.max(z, .7)); }
+      // Units being worked on fly into the star, then out as done; skipped ones burst red.
+      n.flying = n.flying.filter(f => now - f.t0 < 1100);
+      for (const f of n.flying) {
+        const k = (now - f.t0) / 1100; if (k < 0) continue;
+        const a = f.a + t * f.spin * .5;
+        if (f.kind === 'skip') { ctx.strokeStyle = `rgba(255,97,54,${1 - k})`; ctx.lineWidth = 1.2; const ox = x + Math.cos(a) * f.rr * z, oy = y + Math.sin(a) * f.rr * z * .9; ctx.beginPath(); ctx.arc(ox, oy, (2 + k * 10) * Math.max(z, .7), 0, 7); ctx.stroke(); continue; }
+        const rr = k < .5 ? f.rr * (1 - k * 2) : (k - .5) * 2 * 70, out = k >= .5;
+        const ang = out ? Math.atan2(wy - world.sun[1], wx - world.sun[0]) + (f.a % 1 - .5) * .8 : a;
+        const ox = x + Math.cos(ang) * rr * z, oy = y + Math.sin(ang) * rr * z * (out ? 1 : .9);
+        ctx.fillStyle = out ? `rgba(255,214,150,${1 - (k - .5) * 2})` : 'rgba(255,248,236,.95)';
+        ctx.beginPath(); ctx.arc(ox, oy, 2 * Math.max(z, .7), 0, 7); ctx.fill();
+      }
+      ctx.fillStyle = r.j.off ? 'rgba(241,239,233,.4)' : '#fff';
+      ctx.globalAlpha = focus; ctx.beginPath(); ctx.arc(x, y, 3.8 * z, 0, 7); ctx.fill(); ctx.globalAlpha = 1;
+      if (open === i) { ctx.strokeStyle = 'rgba(241,239,233,.8)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(x, y, 17 * z, 0, 7); ctx.stroke(); }
+    });
+    placeLabels();
+    if ((visible && !reduce.matches) || camTo) raf = requestAnimationFrame(frame); else lastT = 0;
+  }
+  let raf = 0, visible = true, lastT = 0;
+  const kick = () => { if (!raf) raf = requestAnimationFrame(frame); };
+
+  function placeLabels() {
+    const [sx, sy] = toScreen(...world.sun);
+    world.sunLbl.style.transform = wide ? `translate(${Math.round(sx)}px,${Math.round(sy + 44 * cam.z)}px) translate(-50%,0)` : `translate(${Math.round(sx + 16)}px,${Math.round(sy + 22 * cam.z)}px)`;
+    nodes.forEach((n, i) => {
+      const [x, y] = toScreen(...world.pts[i]), r = M.rows[i];
+      const reach = (34 + Math.sqrt(Math.min(r.n, VIS_MAX)) * 2.4 + 8) * cam.z;
+      let lx, ly, tf;
+      if (!wide) { lx = x + 46 * cam.z; ly = y; tf = 'translate(0,-50%)'; }
+      else if (n.vert) { lx = x; ly = n.vert === 'u' ? y - reach * .8 : y + reach * .8; tf = `translate(${n.side === 'r' ? 'calc(-100% + 14px)' : '-14px'},${n.vert === 'u' ? '-100%' : '0'})`; }
+      else if (n.side === 'r') { lx = x - reach; ly = y; tf = 'translate(-100%,-50%)'; }
+      else { lx = x + reach; ly = y; tf = 'translate(0,-50%)'; }
+      const key = `${Math.round(lx)},${Math.round(ly)},${tf}`;
+      if (key !== n.last) { n.last = key; n.lbl.style.transform = `translate(${Math.round(lx)}px,${Math.round(ly)}px) ${tf}`; }
+      const col = `rgb(${heatColor(n.heat).map(Math.round).join(',')})`;
+      if (n.col !== col) { n.col = col; n.t.style.color = n.heat < .15 ? 'var(--ink)' : col; }
+      n.lbl.classList.toggle('dim', open >= 0 && open !== i);
+    });
+  }
+
+  // ---------- Interface ----------
+  function render() {
+    M = model();
+    M.rows.forEach((r, i) => {
+      const n = nodes[i], j = r.j;
+      if (j.off) { n.o.textContent = 'off by default'; n.t.textContent = ''; n.tag.hidden = true; return; }
+      n.o.textContent = `${fmtN(r.n)} ${unitOf(j, r.n)} · ${r.rate >= 1 ? fmtN(r.rate) : r.rate.toFixed(1)} a minute`;
+      n.t.textContent = j.window
+        ? (r.skipped > 0 ? `${fmtN(r.skipped)} skipped after 15 min` : `all sent within ${Math.max(1, Math.ceil(r.round))} min`)
+        : `${fmtMin(r.round)}${j.target ? ` · needs ${j.target === 1 ? 'every minute' : 'every ' + j.target + ' min'}` : ''}`;
+      n.tag.hidden = !r.behind; n.tag.textContent = j.window ? 'Missing its window' : 'Falling behind';
+      n.lbl.setAttribute('aria-label', `${j.name}: ${n.o.textContent}; ${n.t.textContent}${r.behind ? '; ' + n.tag.textContent : ''}. Open details.`);
+      if (reduce.matches) { n.heat = heatOf(r); n.orbit = []; }
+    });
+    for (const k of Object.keys(S)) $(k + 'Out').textContent = fmtN(S[k]);
+    const over = M.demand > READ_LIMIT;
+    $('reads').innerHTML = `${fmtN(M.demand)} <small>/ ${READ_LIMIT}</small>`;
+    $('readsBar').style.width = Math.min(100, M.demand / READ_LIMIT * 100) + '%';
+    $('meter').classList.toggle('over', over);
+    $('readsNote').textContent = over ? `Over the limit: Sheets jobs wait for the next minute and run at ${Math.round(M.share * 100)}% speed.` : 'Shared by every job on the one connected Google account.';
+    const w = M.worst;
+    $('say').innerHTML = !w
+      ? `All ${M.on} running jobs keep up. Each one takes a small slice of its work every minute.`
+      : `${M.on - M.behind} of ${M.on} running jobs keep up. <b class="hot">${w.j.name}</b> falls furthest behind: ${w.j.window ? `${fmtN(w.skipped)} of ${fmtN(w.n)} reminders miss their 15-minute window.` : `each ${unitOf(w.j, 1)} gets a turn ${fmtMin(w.round)}, but the code wants ${w.j.target === 1 ? 'every minute' : 'every ' + w.j.target + ' minutes'}.`}${over ? ' Sheets reads are over the shared limit, so every Sheets job slows down.' : ''}`;
+    if (open >= 0) card(open);
+    kick();
+  }
+  function card(i) {
+    const r = M.rows[i], j = r.j;
+    $('card').innerHTML = `
+      <div class="head"><span class="kicker">${j.off ? 'Off by default' : r.behind ? 'Falling behind' : 'Keeping up'}</span><button type="button" id="back">Back to all</button></div>
+      <h2>${j.name}</h2>
+      <p>${j.what}</p>
+      <dl>
+        <dt>Unit</dt><dd>one ${unitOf(j, 1)}${j.off ? '' : `<br><span class="sub">${fmtN(r.n)} now</span>`}</dd>
+        <dt>Per minute</dt><dd><span class="big">${j.per}</span> ${unitOf(j, j.per)}${r.rate < j.per && !j.off ? `<br><span class="sub">${r.rate.toFixed(1)} while Sheets reads are over the limit</span>` : ''}</dd>
+        ${j.off ? '' : `<dt>Full round</dt><dd><span class="big">${j.window ? (r.skipped ? fmtN(r.skipped) + ' skipped' : 'all sent') : fmtMin(r.round)}</span></dd>`}
+        <dt>Needs</dt><dd>${j.why}</dd>
+        <dt>Sheets reads</dt><dd>${j.off ? '—' : `about ${(Math.round(r.reads * 10) / 10)} this minute`}</dd>
+        <dt>Code</dt><dd><code>${j.code}</code></dd>
+      </dl>
+      <p class="find">${j.find}</p>`;
+    $('back').addEventListener('click', () => toggle(i));
+  }
+  function toggle(i) {
+    if (open === i) { open = -1; $('card').classList.remove('open'); camTo = homeCam(); nodes[i].lbl.focus({ preventScroll: true }); }
+    else {
+      open = i; card(i); $('card').classList.add('open');
+      const [wx, wy] = world.pts[i], h = homeCam();
+      camTo = wide ? { x: wx, y: wy, z: h.z * 1.8, ax: W * .34, ay: H * .52 } : { x: wx, y: wy, z: h.z * 1.4, ax: W / 2, ay: Math.min(H / 2, innerHeight * .3) };
+    }
+    if (reduce.matches) { cam = { ...camTo }; camTo = null; }
+    kick();
+  }
+  sky.addEventListener('keydown', e => { if (e.key === 'Escape' && open >= 0) toggle(open); });
+  cv.addEventListener('click', e => {
+    const b = cv.getBoundingClientRect(), mx = e.clientX - b.left, my = e.clientY - b.top;
+    let best = -1, bd = 1e9;
+    world.pts.forEach((p, i) => { const [x, y] = toScreen(...p), d = Math.hypot(x - mx, y - my); if (d < bd) { bd = d; best = i; } });
+    if (bd < 60 * Math.max(cam.z, .6)) toggle(best); else if (open >= 0) toggle(open);
+  });
+
+  // Log sliders for the three counts that span orders of magnitude.
+  const RANGES = { sheets: [10, 1000], copies: [1, 300], reminders: [5, 1000] };
+  const toVal = (k, v) => { const [a, b] = RANGES[k]; return Math.round(a * Math.pow(b / a, v / 1000)); };
+  const toPos = (k, x) => { const [a, b] = RANGES[k]; return Math.round(1000 * Math.log(x / a) / Math.log(b / a)); };
+  for (const k of Object.keys(RANGES)) { $(k).value = toPos(k, S[k]); $(k).addEventListener('input', e => { S[k] = toVal(k, +e.target.value); render(); }); }
+  $('owners').addEventListener('input', e => { S.owners = +e.target.value; render(); });
+
+  new IntersectionObserver(es => { visible = es[0].isIntersecting; kick(); }).observe(sky);
+  document.addEventListener('visibilitychange', () => { visible = !document.hidden; kick(); });
+  let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { fit(); render(); }, 120); });
+  narrow.addEventListener('change', () => { open = -1; $('card').classList.remove('open'); fit(); render(); });
+  reduce.addEventListener('change', () => render());
+
+  M = model();
+  fit(); render();
+  nodes.forEach((n, i) => n.heat = heatOf(M.rows[i]));
+  if (!reduce.matches) { tickAt = performance.now() - TICK + 400; } else frame(performance.now());
+})();
+</script>
